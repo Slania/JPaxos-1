@@ -38,11 +38,14 @@ public class DirectoryProtocol {
     private Client client;
 
     public void start(int localId) throws IOException {
+        logger.info("***** opening properties file ****");
         FileInputStream fis = new FileInputStream("paxos.properties");
         configuration.load(fis);
+        logger.info("***** configuration loaded ****");
         fis.close();
 
         List<PID> processes = loadProcessList();
+        logger.info("***** trying to contact: " + processes.get(localId).getHostname() + ":" + processes.get(localId).getClientPort() + " ****");
         potentialLeader = new Socket(processes.get(localId).getHostname(), processes.get(localId).getClientPort());
         leaderOutputStream = new DataOutputStream(potentialLeader.getOutputStream());
         leaderInputStream = new DataInputStream(potentialLeader.getInputStream());
