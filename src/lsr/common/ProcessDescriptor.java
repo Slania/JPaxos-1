@@ -223,6 +223,10 @@ public final class ProcessDescriptor {
         ProcessDescriptor.processDescriptor = new ProcessDescriptor(config, localId);
     }
 
+    public static ProcessDescriptor getInstance() {
+        return processDescriptor;
+    }
+
     private ProcessDescriptor(Configuration config, int localId) {
         this.localId = localId;
         this.config = config;
