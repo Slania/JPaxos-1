@@ -2,6 +2,7 @@ package lsr.paxos.replica;
 
 import static lsr.common.ProcessDescriptor.processDescriptor;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
@@ -154,6 +155,11 @@ final public class ClientRequestManager {
             case REQUEST:
                 ClientRequest request = command.getRequest();
                 onClientRequest(request, client);
+                break;
+
+            case LEADER:
+                ByteBuffer buffer = ByteBuffer.allocate(1);
+                client.send(new ClientReply(Result.OK, buffer.put((byte) (paxos.isLeader() ? 1 : 0)).array()));
                 break;
 
             default:
