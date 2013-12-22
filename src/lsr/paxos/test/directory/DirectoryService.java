@@ -23,12 +23,14 @@ public class DirectoryService extends SimplifiedService {
     private static final int BATCH_EXECUTE_SIZE = 100;
 
     protected byte[] execute(byte[] value) {
+        logger.info("***** opening properties file ****");
         FileInputStream fis = null;
         try {
             fis = new FileInputStream("paxos.properties");
             configuration.load(fis);
             fis.close();
         } catch (IOException e) {
+            e.printStackTrace();
         }
 
         logger.info("******** in execute method of DirectoryService at time: " + System.currentTimeMillis() + " ********");
