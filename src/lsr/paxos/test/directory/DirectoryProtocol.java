@@ -52,6 +52,8 @@ public class DirectoryProtocol {
 
         initConnection();
 
+        logger.info("***** connection init'd ****");
+
         byte[] byteArray = "Dummy message".getBytes();
         ClientRequest request = new ClientRequest(nextRequestId(), byteArray);
         ClientCommand command = new ClientCommand(ClientCommand.CommandType.LEADER, request);
