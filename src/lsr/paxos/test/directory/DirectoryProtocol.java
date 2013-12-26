@@ -207,7 +207,7 @@ public class DirectoryProtocol {
                                 directoryOutputStream.flush();
 
                                 int ack = directoryInputStream.readInt();
-
+                                logger.info("Did directory get it and ACK? " + String.valueOf(ack == 1));
                                 if (ack == 1) {
                                     logger.info("Migration Acks so far: " + migrationAcks);
                                     if (migrationAcks != null &&
