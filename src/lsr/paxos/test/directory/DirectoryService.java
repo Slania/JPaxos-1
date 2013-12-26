@@ -340,6 +340,12 @@ public class DirectoryService extends SimplifiedService {
                         }
                         migrated = rs.getBoolean(2);
                     }
+                    System.out.println("Object Id: " + command.getObjectId());
+                    System.out.println("Migration Agent IP: " + command.getDirectoryNodeIP());
+                    System.out.println("Migration Agent Port: " + command.getDirectoryNodePort());
+                    System.out.println("Migration Agent ID: " + migrationAgentId);
+                    System.out.println("Migrated: " + migrated);
+                    System.out.println("Migration progress: " + migrationProgress);
                     if (!migrated) {
                         if (migrationProgress != null &&
                             (

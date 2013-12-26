@@ -301,6 +301,9 @@ public class DirectoryProtocol {
 
                                     migrationAgentOutputStream.write(buffer.array());
                                     migrationAgentOutputStream.flush();
+                                    //TODO: should i be closing this instantly or waiting for a while?
+                                    migrationAgentOutputStream.close();
+                                    migrationAgent.close();
                                     buffer.rewind();
                                 }
 
