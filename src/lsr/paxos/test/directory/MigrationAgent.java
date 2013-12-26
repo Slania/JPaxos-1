@@ -25,7 +25,7 @@ import java.util.logging.Logger;
  * Time: 2:42 PM
  * To change this template use File | Settings | File Templates.
  */
-public class Directory {
+public class MigrationAgent {
 
     private ServerSocketChannel serverSocketChannel;
 
@@ -46,7 +46,7 @@ public class Directory {
             client = new Client();
             client.connect();
 
-            DirectoryServiceCommand command = new DirectoryServiceCommand(hostAddress.getBytes(), port, DirectoryServiceCommand.DirectoryCommandType.REGISTER_DIRECTORY);
+            DirectoryServiceCommand command = new DirectoryServiceCommand(hostAddress.getBytes(), port, DirectoryServiceCommand.DirectoryCommandType.REGISTER_MIGRATION_AGENT);
             byte[] response = client.execute(command.toByteArray());
             ByteBuffer buffer = ByteBuffer.wrap(response);
             String status = new String(buffer.array());
@@ -108,32 +108,43 @@ public class Directory {
                         }
 
                         int objectIdLength = readBuffer.getInt();
-                        int replicaSetLength = readBuffer.getInt();
+                        int newReplicaSetLength = readBuffer.getInt();
+                        int oldReplicaSetLength = readBuffer.getInt();
 
                         logger.info(String.valueOf(objectIdLength));
-                        logger.info(String.valueOf(replicaSetLength));
+                        logger.info(String.valueOf(newReplicaSetLength));
+                        logger.info(String.valueOf(oldReplicaSetLength));
 
                         byte[] objectId = new byte[objectIdLength];
-                        byte[] replicaSet = new byte[replicaSetLength];
+                        byte[] newReplicaSet = new byte[newReplicaSetLength];
+                        byte[] oldReplicaSet = new byte[oldReplicaSetLength];
 
                         readBuffer.get(objectId);
-                        readBuffer.get(replicaSet);
+                        readBuffer.get(newReplicaSet);
+                        readBuffer.get(oldReplicaSet);
 
                         logger.info(new String(objectId));
-                        logger.info(new String(replicaSet));
+                        logger.info(new String(newReplicaSet));
+                        logger.info(new String(oldReplicaSet));
 
-                        objectReplicaSetMap.put(new String(objectId), new String(replicaSet));
+                        if (objectReplicaSetMap.get(objectId) != null && objectReplicaSetMap.get(objectId).equals(new String(newReplicaSet) + "->" + new String(oldReplicaSet))) {
+                            /* ack immediately, just a repeat message*/
+                        } else {
+                            objectReplicaSetMap.put(new String(objectId), new String(newReplicaSet) + "->" + new String(oldReplicaSet));
 
-                        for (String object : objectReplicaSetMap.keySet()) {
-                            System.out.println("Contents of map:");
-                            System.out.println("Object: " + object + ", Replicas: " + objectReplicaSetMap.get(object));
+                            for (String object : objectReplicaSetMap.keySet()) {
+                                System.out.println("Contents of map:");
+                                System.out.println("Object: " + object + ", Replicas: " + objectReplicaSetMap.get(object));
+                            }
+                            System.out.println("********-------------------------------********");
+                            /* wait random time to simulate migration of object */
+                            Thread.sleep((long) (Math.random() * 10000));
                         }
-                        System.out.println("********-------------------------------********");
-
-                        ByteBuffer wrap = ByteBuffer.allocate(4);
-                        wrap.putInt(1);
-                        wrap.flip();
-                        ((SocketChannel)key.channel()).write(wrap);
+                        DirectoryServiceCommand ackCommand = new DirectoryServiceCommand(hostAddress.getBytes(), port, DirectoryServiceCommand.DirectoryCommandType.MIGRATION_AGENT_ACK, new String(objectId));
+                        response = client.execute(ackCommand.toByteArray());
+                        buffer = ByteBuffer.wrap(response);
+                        status = new String(buffer.array());
+                        logger.info("*********" + status + "*********");
                     }
                 }
             }
@@ -151,7 +162,7 @@ public class Directory {
     }
 
     public static void main(String[] args) throws IOException, ReplicationException, InterruptedException {
-        Directory directory = new Directory();
+        MigrationAgent directory = new MigrationAgent();
         if (args.length > 2) {
             System.exit(1);
         }
@@ -172,7 +183,7 @@ public class Directory {
         }
     }
 
-    private final static Logger logger = Logger.getLogger(Directory.class.getCanonicalName());
+    private final static Logger logger = Logger.getLogger(MigrationAgent.class.getCanonicalName());
 
 }
 

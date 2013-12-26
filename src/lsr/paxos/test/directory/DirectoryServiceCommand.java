@@ -17,10 +17,12 @@ public class DirectoryServiceCommand implements Serializable {
     private byte[] directoryNodeIP;
     private int directoryNodePort;
     private boolean migrationComplete;
+    private boolean migrated;
     private byte[] migrationAcks;
+    private byte[] migrationTimestamp;
 
     public enum DirectoryCommandType {
-        INSERT, DELETE, READ, UPDATE, REGISTER_DIRECTORY
+        INSERT, DELETE, READ, UPDATE_MIGRATION_COMPLETE, UPDATE_MIGRATION_TIMESTAMP, REGISTER_DIRECTORY, REGISTER_MIGRATION_AGENT, MIGRATION_AGENT_ACK, UPDATE_MIGRATED
     }
 
     public DirectoryServiceCommand(List<Integer> oldReplicaSet, List<Integer> newReplicaSet, DirectoryCommandType directoryCommandType, String objectId, boolean migrationComplete) {
@@ -31,12 +33,26 @@ public class DirectoryServiceCommand implements Serializable {
         this.objectId = objectId.getBytes();
     }
 
-    //UPDATE
-    public DirectoryServiceCommand(String objectId, boolean migrationComplete, String migrationAcks) {
+    //UPDATE_MIGRATION_COMPLETE
+    public DirectoryServiceCommand(String objectId, boolean migrationComplete, String migrationAcks, DirectoryCommandType directoryCommandType) {
         this.objectId = objectId.getBytes();
         this.migrationComplete = migrationComplete;
         this.migrationAcks = migrationAcks.getBytes();
-        this.directoryCommandType = DirectoryCommandType.UPDATE;
+        this.directoryCommandType = directoryCommandType;
+    }
+
+    //UPDATE_MIGRATED
+    public DirectoryServiceCommand(String objectId, boolean migrated, DirectoryCommandType directoryCommandType) {
+        this.objectId = objectId.getBytes();
+        this.migrated = migrated;
+        this.directoryCommandType = directoryCommandType;
+    }
+
+    //UPDATE_MIGRATION_TIMESTAMP
+    public DirectoryServiceCommand(String objectId, String migrationTimestamp, DirectoryCommandType directoryCommandType) {
+        this.objectId = objectId.getBytes();
+        this.migrationTimestamp = migrationTimestamp.getBytes();
+        this.directoryCommandType = directoryCommandType;
     }
 
     //READ/DELETE
@@ -46,10 +62,18 @@ public class DirectoryServiceCommand implements Serializable {
     }
 
     //REGISTER
-    public DirectoryServiceCommand(byte[] directoryNodeIP, int directoryNodePort) {
+    public DirectoryServiceCommand(byte[] directoryNodeIP, int directoryNodePort, DirectoryCommandType directoryCommandType) {
         this.directoryNodeIP = directoryNodeIP;
         this.directoryNodePort = directoryNodePort;
-        this.directoryCommandType = DirectoryCommandType.REGISTER_DIRECTORY;
+        this.directoryCommandType = directoryCommandType;
+    }
+
+    //MIGRATION_AGENT_ACK
+    public DirectoryServiceCommand(byte[] directoryNodeIP, int directoryNodePort, DirectoryCommandType directoryCommandType, String objectId) {
+        this.directoryNodeIP = directoryNodeIP;
+        this.directoryNodePort = directoryNodePort;
+        this.directoryCommandType = directoryCommandType;
+        this.objectId = objectId.getBytes();
     }
 
     //INSERT
@@ -74,6 +98,22 @@ public class DirectoryServiceCommand implements Serializable {
                 dataInput.readFully(directoryNodeIP, 0, directoryIpLength);
                 directoryNodePort = dataInput.readInt();
                 break;
+            }
+            case REGISTER_MIGRATION_AGENT: {
+                int directoryIpLength = dataInput.readInt();
+                directoryNodeIP = new byte[directoryIpLength];
+                dataInput.readFully(directoryNodeIP, 0, directoryIpLength);
+                directoryNodePort = dataInput.readInt();
+                break;
+            }
+            case MIGRATION_AGENT_ACK: {
+                int directoryIpLength = dataInput.readInt();
+                directoryNodeIP = new byte[directoryIpLength];
+                dataInput.readFully(directoryNodeIP, 0, directoryIpLength);
+                directoryNodePort = dataInput.readInt();
+                int objectIdLength = dataInput.readInt();
+                objectId = new byte[objectIdLength];
+                dataInput.readFully(objectId, 0, objectIdLength);
             }
             case INSERT: {
                 int objectIdLength = dataInput.readInt();
@@ -103,11 +143,11 @@ public class DirectoryServiceCommand implements Serializable {
                 System.out.println("Migration complete: " + migrationComplete);
                 break;
             }
-            case UPDATE: {
+            case UPDATE_MIGRATION_COMPLETE: {
                 int objectIdLength = dataInput.readInt();
                 System.out.println("ObjectId Length: " + objectIdLength);
                 int migrationAcksLength = dataInput.readInt();
-                System.out.println("MigrationAcks Length: " + objectIdLength);
+                System.out.println("MigrationAcks Length: " + migrationAcksLength);
                 objectId = new byte[objectIdLength];
                 dataInput.readFully(objectId, 0, objectIdLength);
                 System.out.println("Object Id: " + new String(objectId));
@@ -116,6 +156,28 @@ public class DirectoryServiceCommand implements Serializable {
                 System.out.println("Migration Acks: " + new String(migrationAcks));
                 migrationComplete = dataInput.readByte() == 1;
                 System.out.println("Migration complete: " + migrationComplete);
+                break;
+            }
+            case UPDATE_MIGRATED: {
+                int objectIdLength = dataInput.readInt();
+                System.out.println("ObjectId Length: " + objectIdLength);
+                objectId = new byte[objectIdLength];
+                dataInput.readFully(objectId, 0, objectIdLength);
+                migrated = dataInput.readByte() == 1;
+                System.out.println("Migrated: " + migrated);
+                break;
+            }
+            case UPDATE_MIGRATION_TIMESTAMP: {
+                int objectIdLength = dataInput.readInt();
+                System.out.println("ObjectId Length: " + objectIdLength);
+                int migrationTimestampLength = dataInput.readInt();
+                System.out.println("MigrationTimestamp Length: " + migrationTimestampLength);
+                objectId = new byte[objectIdLength];
+                dataInput.readFully(objectId, 0, objectIdLength);
+                System.out.println("Object Id: " + new String(objectId));
+                migrationTimestamp = new byte[migrationTimestampLength];
+                dataInput.readFully(migrationTimestamp, 0, migrationTimestampLength);
+                System.out.println("Migration Timestamp: " + new String(migrationTimestamp));
                 break;
             }
             case DELETE:
@@ -150,6 +212,26 @@ public class DirectoryServiceCommand implements Serializable {
         return migrationAcks;
     }
 
+    public byte[] getMigrationTimestamp() {
+        return migrationTimestamp;
+    }
+
+    public DirectoryCommandType getDirectoryCommandType() {
+        return directoryCommandType;
+    }
+
+    public byte[] getObjectId() {
+        return objectId;
+    }
+
+    public boolean isMigrationComplete() {
+        return migrationComplete;
+    }
+
+    public boolean isMigrated() {
+        return migrated;
+    }
+
     public String getOldReplicaSetAsCsv() {
         StringBuilder builder = new StringBuilder();
 
@@ -173,18 +255,6 @@ public class DirectoryServiceCommand implements Serializable {
         return builder.toString();
     }
 
-    public DirectoryCommandType getDirectoryCommandType() {
-        return directoryCommandType;
-    }
-
-    public byte[] getObjectId() {
-        return objectId;
-    }
-
-    public boolean isMigrationComplete() {
-        return migrationComplete;
-    }
-
     public byte[] toByteArray() {
         switch (directoryCommandType) {
             case REGISTER_DIRECTORY: {
@@ -195,6 +265,27 @@ public class DirectoryServiceCommand implements Serializable {
                 buffer.putInt(directoryNodeIP.length);
                 buffer.put(directoryNodeIP);
                 buffer.putInt(directoryNodePort);
+                return buffer.array();
+            }
+            case REGISTER_MIGRATION_AGENT: {
+                //4 for the ordinal of the CommandType
+                int numOfBytes = 4 + 4 + directoryNodeIP.length + 4;
+                ByteBuffer buffer = ByteBuffer.allocate(numOfBytes);
+                buffer.putInt(directoryCommandType.ordinal());
+                buffer.putInt(directoryNodeIP.length);
+                buffer.put(directoryNodeIP);
+                buffer.putInt(directoryNodePort);
+                return buffer.array();
+            }
+            case MIGRATION_AGENT_ACK: {
+                int numOfBytes = 4 + 4 + directoryNodeIP.length + 4 + 4 + objectId.length;
+                ByteBuffer buffer = ByteBuffer.allocate(numOfBytes);
+                buffer.putInt(directoryCommandType.ordinal());
+                buffer.putInt(directoryNodeIP.length);
+                buffer.put(directoryNodeIP);
+                buffer.putInt(directoryNodePort);
+                buffer.putInt(objectId.length);
+                buffer.put(objectId);
                 return buffer.array();
             }
             case INSERT: {
@@ -217,7 +308,7 @@ public class DirectoryServiceCommand implements Serializable {
                 buffer.put((byte) (migrationComplete ? 1 : 0));
                 return buffer.array();
             }
-            case UPDATE: {
+            case UPDATE_MIGRATION_COMPLETE: {
                 //4 for the ordinal of the CommandType
                 int numOfBytes = 4 + 4 + 4 + objectId.length + migrationAcks.length + 1;
                 ByteBuffer buffer = ByteBuffer.allocate(numOfBytes);
@@ -227,6 +318,27 @@ public class DirectoryServiceCommand implements Serializable {
                 buffer.put(objectId);
                 buffer.put(migrationAcks);
                 buffer.put((byte) (migrationComplete ? 1 : 0));
+                return buffer.array();
+            }
+            case UPDATE_MIGRATED: {
+                //4 for the ordinal of the CommandType
+                int numOfBytes = 4 + 4 + objectId.length + 1;
+                ByteBuffer buffer = ByteBuffer.allocate(numOfBytes);
+                buffer.putInt(directoryCommandType.ordinal());
+                buffer.putInt(objectId.length);
+                buffer.put(objectId);
+                buffer.put((byte) (migrated ? 1 : 0));
+                return buffer.array();
+            }
+            case UPDATE_MIGRATION_TIMESTAMP: {
+                //4 for the ordinal of the CommandType
+                int numOfBytes = 4 + 4 + 4 + objectId.length + migrationTimestamp.length;
+                ByteBuffer buffer = ByteBuffer.allocate(numOfBytes);
+                buffer.putInt(directoryCommandType.ordinal());
+                buffer.putInt(objectId.length);
+                buffer.putInt(migrationTimestamp.length);
+                buffer.put(objectId);
+                buffer.put(migrationTimestamp);
                 return buffer.array();
             }
             case READ: {

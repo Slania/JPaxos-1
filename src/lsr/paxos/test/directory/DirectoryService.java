@@ -84,7 +84,7 @@ public class DirectoryService extends SimplifiedService {
                 return byteArrayOutput.toByteArray();
             }
 
-            case UPDATE: {
+            case UPDATE_MIGRATION_COMPLETE: {
                 ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
                 DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
 
@@ -102,6 +102,72 @@ public class DirectoryService extends SimplifiedService {
                     preparedStatement.setString(1, new String(command.getMigrationAcks()));
                     preparedStatement.setBoolean(2, command.isMigrationComplete());
                     preparedStatement.setString(3, new String(command.getObjectId()));
+                    preparedStatement.executeUpdate();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+
+                try {
+                    dataOutput.writeInt(1);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+
+                return byteArrayOutput.toByteArray();
+            }
+
+            case UPDATE_MIGRATED: {
+                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
+                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                Connection connection = null;
+                PreparedStatement preparedStatement = null;
+
+                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
+                String user = "postgres";
+                String password = "password";
+
+                try {
+                    connection = DriverManager.getConnection(url, user, password);
+                    String sql = "UPDATE migrations SET migrated = ? where object_id = ?";
+                    preparedStatement = connection.prepareStatement(sql);
+                    preparedStatement.setBoolean(1, command.isMigrated());
+                    preparedStatement.setString(2, new String(command.getObjectId()));
+                    preparedStatement.executeUpdate();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+
+                try {
+                    dataOutput.writeInt(1);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+
+                return byteArrayOutput.toByteArray();
+            }
+
+            case UPDATE_MIGRATION_TIMESTAMP: {
+                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
+                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                Connection connection = null;
+                PreparedStatement preparedStatement = null;
+
+                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
+                String user = "postgres";
+                String password = "password";
+
+                try {
+                    connection = DriverManager.getConnection(url, user, password);
+                    String sql = "UPDATE migrations SET migration_timestamp = ? where object_id = ?";
+                    preparedStatement = connection.prepareStatement(sql);
+                    preparedStatement.setTimestamp(1, Timestamp.valueOf(new String(command.getMigrationTimestamp())));
+                    preparedStatement.setString(2, new String(command.getObjectId()));
                     preparedStatement.executeUpdate();
                 } catch (SQLException e) {
                     e.printStackTrace();
@@ -196,6 +262,121 @@ public class DirectoryService extends SimplifiedService {
 
                 return byteArrayOutput.toByteArray();
             }
+
+            case REGISTER_MIGRATION_AGENT: {
+                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
+                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                Connection connection = null;
+                PreparedStatement preparedStatement = null;
+
+                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
+                String user = "postgres";
+                String password = "password";
+
+                try {
+                    connection = DriverManager.getConnection(url, user, password);
+                    String update = "UPDATE migration_agents SET time_stamp = ? WHERE ip = ? AND port = ?";
+                    String insert = "INSERT INTO migration_agents(ip, port, time_stamp) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM directories WHERE ip = ? AND port = ?)";
+                    preparedStatement = connection.prepareStatement(update);
+                    preparedStatement.setTimestamp(1, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
+                    preparedStatement.setString(2, new String(command.getDirectoryNodeIP()));
+                    preparedStatement.setInt(3, command.getDirectoryNodePort());
+                    preparedStatement.executeUpdate();
+                    preparedStatement = connection.prepareStatement(insert);
+                    preparedStatement.setString(1, new String(command.getDirectoryNodeIP()));
+                    preparedStatement.setInt(2, command.getDirectoryNodePort());
+                    preparedStatement.setTimestamp(3, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
+                    preparedStatement.setString(4, new String(command.getDirectoryNodeIP()));
+                    preparedStatement.setInt(5, command.getDirectoryNodePort());
+                    preparedStatement.executeUpdate();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+
+                try {
+                    dataOutput.write("received migration agent command".getBytes());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+
+                return byteArrayOutput.toByteArray();
+            }
+
+            case MIGRATION_AGENT_ACK:
+                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
+                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                Connection connection = null;
+                PreparedStatement preparedStatement = null;
+
+                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
+                String user = "postgres";
+                String password = "password";
+
+                try {
+                    connection = DriverManager.getConnection(url, user, password);
+                    String fetchId = "SELECT id FROM migration_agents WHERE ip = ? AND port = ?";
+                    String fetchMigration = "SELECT migration_progress_acks, migrated FROM migrations WHERE object_id = ? and migration_complete = false";
+                    preparedStatement = connection.prepareStatement(fetchId);
+                    preparedStatement.setString(1, new String(command.getDirectoryNodeIP()));
+                    preparedStatement.setInt(2, command.getDirectoryNodePort());
+                    ResultSet rs = preparedStatement.executeQuery();
+                    int migrationAgentId = -1;
+                    boolean migrated = false;
+                    String migrationProgress = null;
+                    while (rs.next()) {
+                        migrationAgentId = rs.getInt(1);
+                    }
+                    preparedStatement = connection.prepareStatement(fetchMigration);
+                    preparedStatement.setString(1, new String(command.getObjectId()));
+                    rs = preparedStatement.executeQuery();
+                    while (rs.next()) {
+                        migrationProgress = rs.getString(1);
+                        if (rs.wasNull()) {
+                            migrationProgress = null;
+                        }
+                        migrated = rs.getBoolean(2);
+                    }
+                    if (!migrated) {
+                        if (migrationProgress != null &&
+                            (
+                                !migrationProgress.contains("," + migrationAgentId + ",") ||
+                                !migrationProgress.contains("," + migrationAgentId) ||
+                                !migrationProgress.contains(migrationAgentId + ",") ||
+                                (!migrationProgress.contains(",") && !migrationProgress.contains(String.valueOf(migrationAgentId)))
+                            )
+                        ) {
+                            if (migrationProgress != null && migrationProgress.contains(",")) {
+                                migrationProgress += "," + migrationAgentId;
+                            } else {
+                                migrationProgress = String.valueOf(migrationAgentId);
+                            }
+                            logger.info("Migration Acks after update: " + migrationProgress);
+                            String sql = "UPDATE migrations SET migration_progress_acks = ? WHERE object_id = ?";
+                            preparedStatement = connection.prepareStatement(sql);
+                            preparedStatement.setString(1, migrationProgress);
+                            preparedStatement.setString(2, new String(command.getObjectId()));
+                            preparedStatement.executeUpdate();
+                        }
+                    }
+
+                    try {
+                        dataOutput.write("received migration agent update".getBytes());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+
+                    return byteArrayOutput.toByteArray();
+
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+
         }
         return null;
     }
