@@ -322,6 +322,43 @@ public class DirectoryProtocol {
                                         logger.info("*******Paxos updated*******");
                                     }
                                 }
+                            } else {
+                                if (migrationAgentsAcks != null) {
+                                    logger.info("There have been some migration agent ACKs");
+                                    StringTokenizer stringTokenizer = new StringTokenizer(migrationAgentsAcks, ",");
+                                    boolean atLeastOneElement = false;
+                                    while (stringTokenizer.hasMoreElements()) {
+                                        stringTokenizer.nextElement();
+                                        atLeastOneElement = true;
+                                        migrationAgentsSql += "?,";
+                                    }
+                                    if (atLeastOneElement) {
+                                        migrationAgentsSql = migrationAgentsSql.substring(0, migrationAgentsSql.length() - 1);
+                                        migrationAgentsSql += ")";
+                                    }
+                                    preparedStatement = connection.prepareStatement(migrationAgentsSql);
+                                    int index = 1;
+                                    stringTokenizer = new StringTokenizer(migrationAgentsAcks, ",");
+                                    while (stringTokenizer.hasMoreElements()) {
+                                        preparedStatement.setInt(index, Integer.valueOf((String) stringTokenizer.nextElement()));
+                                        index++;
+                                    }
+                                    logger.info("Firing query: " + preparedStatement.toString());
+                                    rs2 = preparedStatement.executeQuery();
+                                    boolean empty = true;
+
+                                    while (rs2.next()) {
+                                        empty = false;
+                                    }
+                                    if (empty) {
+                                        logger.info("*******Paxos updating to migrated********");
+                                        DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, true, DirectoryServiceCommand.DirectoryCommandType.UPDATE_MIGRATED);
+                                        byte[] response = client.execute(updateCommand.toByteArray());
+                                        if (ByteBuffer.wrap(response).getInt() == 1) {
+                                            logger.info("*******Paxos updated*******");
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
