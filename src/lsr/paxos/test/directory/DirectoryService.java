@@ -164,7 +164,7 @@ public class DirectoryService extends SimplifiedService {
 
                 try {
                     connection = DriverManager.getConnection(url, user, password);
-                    String sql = "UPDATE migrations SET migration_timestamp = ? where object_id = ?";
+                    String sql = "UPDATE migrations SET migration_started_timestamp = ? where object_id = ?";
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.setTimestamp(1, Timestamp.valueOf(new String(command.getMigrationTimestamp())));
                     preparedStatement.setString(2, new String(command.getObjectId()));
