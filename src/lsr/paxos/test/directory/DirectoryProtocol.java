@@ -210,13 +210,15 @@ public class DirectoryProtocol {
                                 logger.info("Did directory get it and ACK? " + String.valueOf(ack == 1));
                                 if (ack == 1) {
                                     logger.info("Migration Acks so far: " + migrationAcks);
-                                    if (migrationAcks != null &&
+                                    if ((migrationAcks != null &&
                                         (
                                             !migrationAcks.contains("," + directoryId + ",") ||
                                             !migrationAcks.contains("," + directoryId) ||
                                             !migrationAcks.contains(directoryId + ",") ||
                                             (!migrationAcks.contains(",") && !migrationAcks.contains(String.valueOf(directoryId)))
-                                        )
+                                        ))
+                                        ||
+                                        migrationAcks == null
                                     ) {
                                         if (migrationAcks != null && migrationAcks.contains(",")) {
                                             migrationAcks += "," + directoryId;
