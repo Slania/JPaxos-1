@@ -277,7 +277,7 @@ public class DirectoryService extends SimplifiedService {
                 try {
                     connection = DriverManager.getConnection(url, user, password);
                     String update = "UPDATE migration_agents SET time_stamp = ? WHERE ip = ? AND port = ?";
-                    String insert = "INSERT INTO migration_agents(ip, port, time_stamp) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM directories WHERE ip = ? AND port = ?)";
+                    String insert = "INSERT INTO migration_agents(ip, port, time_stamp) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM migration_agents WHERE ip = ? AND port = ?)";
                     preparedStatement = connection.prepareStatement(update);
                     preparedStatement.setTimestamp(1, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
                     preparedStatement.setString(2, new String(command.getDirectoryNodeIP()));

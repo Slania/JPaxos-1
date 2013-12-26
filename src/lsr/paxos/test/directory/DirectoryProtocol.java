@@ -78,7 +78,7 @@ public class DirectoryProtocol {
         String directoriesSql;
         String migrationAgentsSql;
         String emptyDirectoriesSql = "SELECT id, ip, port from directories";
-        String emptyMigrationAgentsSql = "SELECT id, ip, port from directories";
+        String emptyMigrationAgentsSql = "SELECT id, ip, port from migration_agents";
 
         while (true) {
             try {
@@ -297,7 +297,7 @@ public class DirectoryProtocol {
                                     System.out.println("*********----------------------------*********");
 
                                     migrationAgent = new Socket(migrationAgentIP, migrationAgentPort);
-                                    migrationAgentOutputStream = new DataOutputStream(directory.getOutputStream());
+                                    migrationAgentOutputStream = new DataOutputStream(migrationAgent.getOutputStream());
 
                                     migrationAgentOutputStream.write(buffer.array());
                                     migrationAgentOutputStream.flush();
