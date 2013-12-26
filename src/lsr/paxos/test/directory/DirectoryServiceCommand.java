@@ -72,8 +72,8 @@ public class DirectoryServiceCommand implements Serializable {
     public DirectoryServiceCommand(byte[] directoryNodeIP, int directoryNodePort, DirectoryCommandType directoryCommandType, String objectId) {
         this.directoryNodeIP = directoryNodeIP;
         this.directoryNodePort = directoryNodePort;
-        this.directoryCommandType = directoryCommandType;
         this.objectId = objectId.getBytes();
+        this.directoryCommandType = directoryCommandType;
     }
 
     //INSERT
@@ -114,6 +114,7 @@ public class DirectoryServiceCommand implements Serializable {
                 int objectIdLength = dataInput.readInt();
                 objectId = new byte[objectIdLength];
                 dataInput.readFully(objectId, 0, objectIdLength);
+                break;
             }
             case INSERT: {
                 int objectIdLength = dataInput.readInt();
