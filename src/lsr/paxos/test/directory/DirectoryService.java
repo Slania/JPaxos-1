@@ -347,13 +347,15 @@ public class DirectoryService extends SimplifiedService {
                     System.out.println("Migrated: " + migrated);
                     System.out.println("Migration progress: " + migrationProgress);
                     if (!migrated) {
-                        if (migrationProgress != null &&
+                        if ((migrationProgress != null &&
                             (
                                 !migrationProgress.contains("," + migrationAgentId + ",") ||
                                 !migrationProgress.contains("," + migrationAgentId) ||
                                 !migrationProgress.contains(migrationAgentId + ",") ||
                                 (!migrationProgress.contains(",") && !migrationProgress.contains(String.valueOf(migrationAgentId)))
-                            )
+                            ))
+                            ||
+                            migrationProgress == null
                         ) {
                             if (migrationProgress != null && migrationProgress.contains(",")) {
                                 migrationProgress += "," + migrationAgentId;
