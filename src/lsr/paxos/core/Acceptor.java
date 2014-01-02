@@ -1,9 +1,11 @@
 package lsr.paxos.core;
 
 import static lsr.common.ProcessDescriptor.processDescriptor;
+import static lsr.paxos.test.statistics.FlowPointData.FlowPoint.Acceptor_OnPropose;
 
 import java.util.Deque;
 
+import lsr.common.ClientRequest;
 import lsr.paxos.UnBatcher;
 import lsr.paxos.messages.Accept;
 import lsr.paxos.messages.Prepare;
@@ -19,6 +21,8 @@ import lsr.paxos.storage.ConsensusInstance.LogEntryState;
 import lsr.paxos.storage.Log;
 import lsr.paxos.storage.Storage;
 
+import lsr.paxos.test.statistics.FlowPointData;
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,11 +38,10 @@ class Acceptor {
 
     /**
      * Initializes new instance of <code>Acceptor</code>.
-     * 
-     * @param paxos - the paxos the acceptor belong to
+     *
+     * @param paxos   - the paxos the acceptor belong to
      * @param storage - data associated with the paxos
      * @param network - used to send responses
-     * 
      */
     public Acceptor(Paxos paxos, Storage storage, Network network) {
         this.paxos = paxos;
@@ -53,13 +56,13 @@ class Acceptor {
      * retransmission or out-of-order delivery. If the process already accepted
      * this proposal, then the proposer doesn't need anymore the prepareOK
      * message. Otherwise it might need the message, so resent it.
-     * 
+     *
      * @param msg received prepare message
      * @see Prepare
      */
     public void onPrepare(Prepare msg, int sender) {
         assert paxos.getDispatcher().amIInDispatcher() : "Thread should not be here: " +
-                                                         Thread.currentThread();
+                Thread.currentThread();
 
         if (!paxos.isActive())
             return;
@@ -91,13 +94,13 @@ class Acceptor {
 
     /**
      * Accepts proposals higher or equal than the current view.
-     * 
+     *
      * @param message - received propose message
-     * @param sender - the id of replica that send the message
+     * @param sender  - the id of replica that send the message
      */
     public void onPropose(final Propose message, final int sender) {
         assert message.getView() == storage.getView() : "Msg.view: " + message.getView() +
-                                                        ", view: " + storage.getView();
+                ", view: " + storage.getView();
         assert paxos.getDispatcher().amIInDispatcher();
 
         ConsensusInstance instance = storage.getLog().getInstance(message.getInstanceId());
@@ -155,6 +158,24 @@ class Acceptor {
         }
 
         assert instance.getValue() != null;
+
+        if (processDescriptor.indirectConsensus) {
+            for (ClientBatchID batchID : cbids) {
+                ClientRequest[] requests = ClientBatchStore.instance.getBatch(batchID);
+                for (ClientRequest request : requests) {
+                    synchronized (ReplicaRequestTimelines.lock) {
+                        ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(Acceptor_OnPropose, System.currentTimeMillis()));
+                    }
+                }
+            }
+        } else {
+            ClientRequest[] requests = UnBatcher.unpackCR(instance.getValue());
+            for (ClientRequest request : requests) {
+                synchronized (ReplicaRequestTimelines.lock) {
+                    ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(Acceptor_OnPropose, System.currentTimeMillis()));
+                }
+            }
+        }
 
         // leader will not send the accept message;
         if (!paxos.isLeader()) {

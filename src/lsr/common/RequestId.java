@@ -54,6 +54,7 @@ public final class RequestId implements Serializable, Comparable<RequestId> {
         return seqNumber - requestId.seqNumber;
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;
@@ -67,6 +68,7 @@ public final class RequestId implements Serializable, Comparable<RequestId> {
         return clientId == requestId.clientId && seqNumber == requestId.seqNumber;
     }
 
+    @Override
     public int hashCode() {
         int result = 17;
         result = 31 * result + (int) clientId;

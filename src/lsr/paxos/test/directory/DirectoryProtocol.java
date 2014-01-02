@@ -309,21 +309,22 @@ public class DirectoryProtocol {
                                     buffer.rewind();
                                 }
 
+                                logger.info("*******Updating migration timestamp*******");
+                                DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss")), UPDATE_MIGRATION_TIMESTAMP);
+                                byte[] response = client.execute(updateCommand.toByteArray());
+                                if (ByteBuffer.wrap(response).getInt() == 1) {
+                                    logger.info("*******Paxos updated*******");
+                                }
+
                                 if (empty) {
                                     logger.info("*******Paxos updating to migrated********");
-                                    DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, true, DirectoryServiceCommand.DirectoryCommandType.UPDATE_MIGRATED);
-                                    byte[] response = client.execute(updateCommand.toByteArray());
-                                    if (ByteBuffer.wrap(response).getInt() == 1) {
-                                        logger.info("*******Paxos updated*******");
-                                    }
-                                } else {
-                                    logger.info("*******Updating migration timestamp*******");
-                                    DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss")), UPDATE_MIGRATION_TIMESTAMP);
-                                    byte[] response = client.execute(updateCommand.toByteArray());
+                                    updateCommand = new DirectoryServiceCommand(objectId, true, DirectoryServiceCommand.DirectoryCommandType.UPDATE_MIGRATED);
+                                    response = client.execute(updateCommand.toByteArray());
                                     if (ByteBuffer.wrap(response).getInt() == 1) {
                                         logger.info("*******Paxos updated*******");
                                     }
                                 }
+
                             } else {
                                 if (migrationAgentsAcks != null) {
                                     logger.info("There have been some migration agent ACKs");

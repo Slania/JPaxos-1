@@ -1,6 +1,7 @@
 package lsr.paxos.replica;
 
 import static lsr.common.ProcessDescriptor.processDescriptor;
+import static lsr.paxos.test.statistics.FlowPointData.FlowPoint.ClientRequestBatcher_SendBatch;
 
 import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -10,6 +11,8 @@ import lsr.common.ClientRequest;
 import lsr.common.MovingAverage;
 import lsr.paxos.storage.Storage;
 
+import lsr.paxos.test.statistics.FlowPointData;
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,6 +215,12 @@ public class ClientRequestBatcher implements Runnable {
         final ClientBatchID bid = new ClientBatchID(uniqueRunId, nextBatchId++);
         // Transform the ArrayList into an array with the exact size.
         final ClientRequest[] batches = batch.toArray(new ClientRequest[batch.size()]);
+
+        for (ClientRequest clientRequest : batches) {
+            synchronized (ReplicaRequestTimelines.lock) {
+                ReplicaRequestTimelines.addFlowPoint(clientRequest.getRequestId(), new FlowPointData(ClientRequestBatcher_SendBatch, System.currentTimeMillis()));
+            }
+        }
 
         if (processDescriptor.indirectConsensus)
             batchManager.dispatchForwardNewBatch(bid, batches);

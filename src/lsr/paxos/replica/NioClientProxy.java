@@ -18,6 +18,7 @@ import lsr.paxos.idgen.TimeBasedIdGenerator;
 import lsr.paxos.idgen.ViewEpochIdGenerator;
 import lsr.paxos.storage.Storage;
 
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

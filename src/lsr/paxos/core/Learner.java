@@ -1,14 +1,23 @@
 package lsr.paxos.core;
 
 import static lsr.common.ProcessDescriptor.processDescriptor;
+import static lsr.paxos.test.statistics.FlowPointData.FlowPoint.Acceptor_OnPropose;
+
+import lsr.common.ClientRequest;
+import lsr.paxos.UnBatcher;
 import lsr.paxos.messages.Accept;
+import lsr.paxos.replica.ClientBatchID;
 import lsr.paxos.storage.ClientBatchStore;
 import lsr.paxos.storage.ConsensusInstance;
 import lsr.paxos.storage.ConsensusInstance.LogEntryState;
 import lsr.paxos.storage.Storage;
 
+import lsr.paxos.test.statistics.FlowPointData;
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Deque;
 
 /**
  * Represents the part of <code>Paxos</code> which is responsible for receiving
@@ -47,6 +56,25 @@ class Learner {
                                                          Thread.currentThread();
 
         final ConsensusInstance instance = storage.getLog().getInstance(message.getInstanceId());
+
+        if (processDescriptor.indirectConsensus) {
+            Deque<ClientBatchID> clientBatchIds = instance.getClientBatchIds();
+            for (ClientBatchID clientBatchId : clientBatchIds) {
+                ClientRequest[] requests = ClientBatchStore.instance.getBatch(clientBatchId);
+                for (ClientRequest request : requests) {
+                    synchronized (ReplicaRequestTimelines.lock) {
+                        ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Learner_OnAccept, System.currentTimeMillis()));
+                    }
+                }
+            }
+        } else {
+            ClientRequest[] requests = UnBatcher.unpackCR(instance.getValue());
+            for (ClientRequest request : requests) {
+                synchronized (ReplicaRequestTimelines.lock) {
+                    ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Learner_OnAccept, System.currentTimeMillis()));
+                }
+            }
+        }
 
         logger.trace("Learner received {}", message);
 

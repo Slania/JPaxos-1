@@ -1,17 +1,17 @@
 package lsr.paxos.replica;
 
 import static lsr.common.ProcessDescriptor.processDescriptor;
+import static lsr.paxos.test.statistics.FlowPointData.FlowPoint.ClientBatchManager_BatchSent;
+import static lsr.paxos.test.statistics.FlowPointData.FlowPoint.ClientBatchManager_OnForwardClientBatch;
+import static lsr.paxos.test.statistics.FlowPointData.FlowPoint.ClientBatchManager_SendToAll;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import lsr.common.ClientRequest;
 import lsr.common.SingleThreadDispatcher;
+import lsr.paxos.UnBatcher;
 import lsr.paxos.core.Paxos;
 import lsr.paxos.messages.AskForClientBatch;
 import lsr.paxos.messages.ForwardClientBatch;
@@ -21,6 +21,8 @@ import lsr.paxos.network.MessageHandler;
 import lsr.paxos.network.Network;
 import lsr.paxos.storage.ClientBatchStore;
 
+import lsr.paxos.test.statistics.FlowPointData;
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +37,9 @@ final public class ClientBatchManager {
             "CliBatchManager");
     private final ClientBatchStore batchStore;
 
-    /** Maps missing batch ID to task(s) for retrieving it */
+    /**
+     * Maps missing batch ID to task(s) for retrieving it
+     */
     private final HashMap<ClientBatchID, List<FwdBatchRetransmitter>> missingBatches = new HashMap<ClientBatchID, List<FwdBatchRetransmitter>>();
 
     private final HashMap<FwdBatchRetransmitter, ScheduledFuture<?>> taskToFuture = new HashMap<ClientBatchManager.FwdBatchRetransmitter, ScheduledFuture<?>>();
@@ -97,15 +101,15 @@ final public class ClientBatchManager {
 
     private void checkIfInDispatcher() {
         assert dispatcher.amIInDispatcher() : "Not in ClientBatchManager dispatcher. " +
-                                              Thread.currentThread().getName();
+                Thread.currentThread().getName();
     }
 
     /**
      * Received a forwarded request.
      */
-    private void onForwardClientBatch(ForwardClientBatch fReq, int sender)
-    {
+    private void onForwardClientBatch(ForwardClientBatch fReq, int sender) {
         checkIfInDispatcher();
+        ClientBatchID rid = fReq.rid;
 
         List<FwdBatchRetransmitter> tasks = missingBatches.remove(fReq.rid);
         if (tasks != null) {
@@ -123,13 +127,24 @@ final public class ClientBatchManager {
 
         batchStore.setBatch(fReq);
 
+        if (processDescriptor.indirectConsensus) {
+            ClientRequest[] requests = ClientBatchStore.instance.getBatch(rid);
+            for (ClientRequest request : requests) {
+                synchronized (ReplicaRequestTimelines.lock) {
+                    ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(ClientBatchManager_OnForwardClientBatch, System.currentTimeMillis()));
+                }
+            }
+        }
+
         tryPropose(fReq.rid);
     }
 
-    /** Returns true iff either required or contain undecided client requests */
+    /**
+     * Returns true iff either required or contain undecided client requests
+     */
     private boolean usefull(ForwardClientBatch fReq) {
         return batchStore.isAnyInstanceWaiting(fReq.rid) ||
-               replica.hasUnexecutedRequests(fReq.requests);
+                replica.hasUnexecutedRequests(fReq.requests);
     }
 
     private void tryPropose(ClientBatchID cbId) {
@@ -137,7 +152,9 @@ final public class ClientBatchManager {
             paxos.enqueueRequest(cbId);
     }
 
-    /** Transmits a batch to the other replicas */
+    /**
+     * Transmits a batch to the other replicas
+     */
     public void dispatchForwardNewBatch(final ClientBatchID bid, final ClientRequest[] batches) {
         dispatcher.submit(new Runnable() {
             @Override
@@ -155,8 +172,18 @@ final public class ClientBatchManager {
         ForwardClientBatch fReqMsg = new ForwardClientBatch(bid, batches);
 
         logger.debug("Forwarding batch: {}", fReqMsg);
-
+        for (ClientRequest request : batches) {
+            synchronized (ReplicaRequestTimelines.lock) {
+                ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(ClientBatchManager_SendToAll, System.currentTimeMillis()));
+            }
+        }
         network.sendToOthers(fReqMsg);
+        for (ClientRequest request : batches) {
+            synchronized (ReplicaRequestTimelines.lock) {
+                ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(ClientBatchManager_BatchSent, System.currentTimeMillis()));
+            }
+        }
+
         // Local delivery
         onForwardClientBatch(fReqMsg, localId);
     }
@@ -251,7 +278,7 @@ final public class ClientBatchManager {
 
                 ScheduledFuture<?> sf = dispatcher.scheduleAtFixedRate(fbr, instant ? 0
                         : processDescriptor.retransmitTimeout, processDescriptor.retransmitTimeout /
-                                                               processDescriptor.numReplicas,
+                        processDescriptor.numReplicas,
                         TimeUnit.MILLISECONDS);
 
                 taskToFuture.put(fbr, sf);
@@ -267,7 +294,10 @@ final public class ClientBatchManager {
     }
 
     // TODO: (JK) check if the method below is longer needed
-    /** Clears all tasks hanging upon the provided batches */
+
+    /**
+     * Clears all tasks hanging upon the provided batches
+     */
     public void removeBatches(final Collection<ClientBatchID> cbids) {
         dispatcher.execute(new Runnable() {
 
@@ -275,8 +305,7 @@ final public class ClientBatchManager {
                 for (ClientBatchID cbid : cbids) {
                     List<FwdBatchRetransmitter> fbrs = missingBatches.remove(cbid);
                     if (fbrs != null)
-                        for (FwdBatchRetransmitter fbr : fbrs)
-                        {
+                        for (FwdBatchRetransmitter fbr : fbrs) {
                             ScheduledFuture<?> sf = taskToFuture.remove(fbr);
                             if (sf != null) {
                                 sf.cancel(false);

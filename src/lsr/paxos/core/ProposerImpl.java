@@ -3,17 +3,11 @@ package lsr.paxos.core;
 import static lsr.common.ProcessDescriptor.processDescriptor;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 
+import lsr.common.ClientRequest;
 import lsr.common.CrashModel;
-import lsr.paxos.ActiveRetransmitter;
-import lsr.paxos.EpochPrepareRetransmitter;
-import lsr.paxos.PrepareRetransmitter;
-import lsr.paxos.PrepareRetransmitterImpl;
-import lsr.paxos.RetransmittedMessage;
+import lsr.paxos.*;
 import lsr.paxos.messages.Message;
 import lsr.paxos.messages.Prepare;
 import lsr.paxos.messages.PrepareOK;
@@ -29,6 +23,8 @@ import lsr.paxos.storage.ConsensusInstance.LogEntryState;
 import lsr.paxos.storage.Log;
 import lsr.paxos.storage.Storage;
 
+import lsr.paxos.test.statistics.FlowPointData;
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -455,6 +451,25 @@ public class ProposerImpl implements Proposer {
 
         assert !processDescriptor.indirectConsensus ||
                ClientBatchStore.instance.hasAllBatches(instance.getClientBatchIds());
+
+        if (processDescriptor.indirectConsensus) {
+            Deque<ClientBatchID> clientBatchIds = instance.getClientBatchIds();
+            for (ClientBatchID clientBatchId : clientBatchIds) {
+                ClientRequest[] requests = ClientBatchStore.instance.getBatch(clientBatchId);
+                for (ClientRequest request : requests) {
+                    synchronized (ReplicaRequestTimelines.lock) {
+                        ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.ProposerImpl_Propose, System.currentTimeMillis()));
+                    }
+                }
+            }
+        } else {
+            ClientRequest[] requests = UnBatcher.unpackCR(instance.getValue());
+            for (ClientRequest request : requests) {
+                synchronized (ReplicaRequestTimelines.lock) {
+                    ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.ProposerImpl_Propose, System.currentTimeMillis()));
+                }
+            }
+        }
 
         // Mark the instance as accepted locally
         instance.getAccepts().set(processDescriptor.localId);

@@ -15,6 +15,8 @@ import lsr.paxos.UnBatcher;
 import lsr.paxos.storage.ClientBatchStore;
 import lsr.paxos.storage.ConsensusInstance;
 
+import lsr.paxos.test.statistics.FlowPointData;
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,17 +107,26 @@ public class DecideCallbackImpl implements DecideCallback {
                     ArrayList<ClientRequest> requestsList = new ArrayList<ClientRequest>();
                     for (ClientBatchID bId : batch) {
                         assert !bId.isNop();
-
                         ClientRequest[] requestsFragment = ClientBatchStore.instance.getBatch(bId);
                         logger.debug("Executing batch: {}", bId);
                         replica.executeClientBatchAndWait(executeUB, requestsFragment);
                         requestsList.addAll(Arrays.asList(requestsFragment));
+                        for (ClientRequest clientRequest : requestsList) {
+                            synchronized (ReplicaRequestTimelines.lock) {
+                                ReplicaRequestTimelines.addFlowPoint(clientRequest.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.DecidedCallbackImpl_ExecuteRequests, System.currentTimeMillis()));
+                            }
+                        }
                     }
                     requests = (ClientRequest[]) requestsList.toArray();
                     averageInstanceExecTime.add(System.currentTimeMillis() - start);
                 }
             } else {
                 requests = UnBatcher.unpackCR(ci.getValue());
+                for (ClientRequest request : requests) {
+                    synchronized (ReplicaRequestTimelines.lock) {
+                        ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.DecidedCallbackImpl_ExecuteRequests, System.currentTimeMillis()));
+                    }
+                }
                 if (logger.isDebugEnabled(processDescriptor.logMark_OldBenchmark)) {
                     logger.info(processDescriptor.logMark_OldBenchmark,
                             "Executing instance: {} {}",
@@ -130,6 +141,11 @@ public class DecideCallbackImpl implements DecideCallback {
 
             // Done with all the client batches in this instance
             replica.instanceExecuted(executeUB, requests);
+            for (ClientRequest clientRequest : requests) {
+                synchronized (ReplicaRequestTimelines.lock) {
+                    ReplicaRequestTimelines.logFLowPoints(clientRequest.getRequestId());
+                }
+            }
             synchronized (decidedWaitingExecution) {
                 decidedWaitingExecution.remove(executeUB);
             }
