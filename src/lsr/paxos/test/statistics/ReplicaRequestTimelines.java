@@ -60,11 +60,13 @@ public class ReplicaRequestTimelines implements Runnable{
     @Override
     public void run() {
         logger.info("******* Replica Request Timelines started *******");
-        for (RequestId finishedRequestId : finishedRequestIds) {
-            logger.info("********************************************");
-            logger.info("****** Replica Request Id: " + finishedRequestId.toString() + " ******");
-            logFLowPoints(finishedRequestId);
-            logger.info("********************************************");
+        while (true) {
+            for (RequestId finishedRequestId : finishedRequestIds) {
+                logger.info("********************************************");
+                logger.info("****** Replica Request Id: " + finishedRequestId.toString() + " ******");
+                logFLowPoints(finishedRequestId);
+                logger.info("********************************************");
+            }
         }
     }
 }
