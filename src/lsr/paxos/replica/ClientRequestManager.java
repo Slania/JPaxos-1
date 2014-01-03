@@ -17,6 +17,8 @@ import lsr.common.SingleThreadDispatcher;
 import lsr.common.nio.SelectorThread;
 import lsr.paxos.core.Paxos;
 
+import lsr.paxos.test.statistics.FlowPointData;
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -276,7 +278,15 @@ final public class ClientRequestManager {
                         "Scheduling sending reply: {} {}", request.getRequestId(), clientReply);
             }
 
+            synchronized (ReplicaRequestTimelines.lock) {
+                ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.ClientRequestManager_OnRequestExecuted, System.currentTimeMillis()));
+            }
+
             client.send(clientReply);
+
+            synchronized (ReplicaRequestTimelines.lock) {
+                ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.NioClientProxy_Sent, System.currentTimeMillis()));
+            }
         }
     }
 

@@ -23,6 +23,7 @@ public class DirectoryService extends SimplifiedService {
     private static final int BATCH_EXECUTE_SIZE = 100;
 
     protected byte[] execute(byte[] value) {
+
         logger.info("***** opening properties file ****");
         FileInputStream fis = null;
         try {

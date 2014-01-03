@@ -13,6 +13,7 @@ import lsr.common.nio.AcceptHandler;
 import lsr.common.nio.ReaderAndWriter;
 import lsr.common.nio.SelectorThread;
 
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,6 +86,10 @@ public class NioClientManager implements AcceptHandler {
         for (int i = 0; i < selectorThreads.length; i++) {
             selectorThreads[i].start();
         }
+
+        Thread requestTimeline = new Thread(new ReplicaRequestTimelines());
+        requestTimeline.start();
+
     }
 
     /**

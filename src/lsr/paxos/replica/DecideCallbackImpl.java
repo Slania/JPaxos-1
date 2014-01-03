@@ -29,16 +29,20 @@ public class DecideCallbackImpl implements DecideCallback {
     /**
      * Temporary storage for the instances that finished and are not yet
      * executed.
-     * 
+     * <p/>
      * Warning: multi-thread access
      */
     private final NavigableMap<Integer, ConsensusInstance> decidedWaitingExecution =
             new TreeMap<Integer, ConsensusInstance>();
 
-    /** Next instance that will be executed on the replica. Same as in replica */
+    /**
+     * Next instance that will be executed on the replica. Same as in replica
+     */
     private int executeUB;
 
-    /** Used to predict how much time a single instance takes */
+    /**
+     * Used to predict how much time a single instance takes
+     */
     private MovingAverage averageInstanceExecTime = new MovingAverage(0.4, 0);
 
     /**
@@ -59,6 +63,25 @@ public class DecideCallbackImpl implements DecideCallback {
             decidedWaitingExecution.put(instance, ci);
         }
 
+        if (processDescriptor.indirectConsensus) {
+            Deque<ClientBatchID> clientBatchIds = ci.getClientBatchIds();
+            for (ClientBatchID clientBatchId : clientBatchIds) {
+                ClientRequest[] clientRequests = ClientBatchStore.instance.getBatch(clientBatchId);
+                for (ClientRequest clientRequest : clientRequests) {
+                    synchronized (ReplicaRequestTimelines.lock) {
+                        ReplicaRequestTimelines.addFlowPoint(clientRequest.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.DecidedCallbackImpl_onRequestOrdered, System.currentTimeMillis()));
+                    }
+                }
+            }
+        } else {
+            ClientRequest[] clientRequests = UnBatcher.unpackCR(ci.getValue());
+            for (ClientRequest clientRequest : clientRequests) {
+                synchronized (ReplicaRequestTimelines.lock) {
+                    ReplicaRequestTimelines.addFlowPoint(clientRequest.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.DecidedCallbackImpl_onRequestOrdered, System.currentTimeMillis()));
+                }
+            }
+        }
+
         replicaDispatcher.submit(new Runnable() {
             @Override
             public void run() {
@@ -68,7 +91,9 @@ public class DecideCallbackImpl implements DecideCallback {
         Thread.yield();
     }
 
-    /** Returns how many instances is the service behind the Paxos protocol */
+    /**
+     * Returns how many instances is the service behind the Paxos protocol
+     */
     public int decidedButNotExecutedCount() {
         synchronized (decidedWaitingExecution) {
             return decidedWaitingExecution.size();
@@ -143,7 +168,7 @@ public class DecideCallbackImpl implements DecideCallback {
             replica.instanceExecuted(executeUB, requests);
             for (ClientRequest clientRequest : requests) {
                 synchronized (ReplicaRequestTimelines.lock) {
-                    ReplicaRequestTimelines.logFLowPoints(clientRequest.getRequestId());
+                    ReplicaRequestTimelines.finishedRequests.add(clientRequest.getRequestId());
                 }
             }
             synchronized (decidedWaitingExecution) {

@@ -34,6 +34,8 @@ import lsr.paxos.storage.ClientBatchStore;
 import lsr.paxos.storage.ConsensusInstance;
 import lsr.paxos.storage.ConsensusInstance.LogEntryState;
 import lsr.paxos.storage.Storage;
+import lsr.paxos.test.statistics.FlowPointData;
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import lsr.service.Service;
 
 import org.slf4j.Logger;
@@ -381,6 +383,9 @@ public class Replica {
 
         for (ClientRequest cRequest : requests) {
             RequestId rID = cRequest.getRequestId();
+            synchronized (ReplicaRequestTimelines.lock) {
+                ReplicaRequestTimelines.addFlowPoint(rID, new FlowPointData(FlowPointData.FlowPoint.Replica_ExecuteClientRequest, System.currentTimeMillis()));
+            }
             Reply lastReply = executedRequests.get(rID.getClientId());
             if (lastReply != null) {
                 int lastSequenceNumberFromClient = lastReply.getRequestId().getSeqNumber();

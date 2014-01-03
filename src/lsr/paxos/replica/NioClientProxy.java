@@ -18,6 +18,7 @@ import lsr.paxos.idgen.TimeBasedIdGenerator;
 import lsr.paxos.idgen.ViewEpochIdGenerator;
 import lsr.paxos.storage.Storage;
 
+import lsr.paxos.test.statistics.FlowPointData;
 import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,6 +93,9 @@ public class NioClientProxy implements ClientProxy {
     private void execute(ByteBuffer buffer) throws InterruptedException {
         ClientCommand command = new ClientCommand(buffer);
         requestManager.onClientRequest(command, this);
+        synchronized (ReplicaRequestTimelines.lock) {
+            ReplicaRequestTimelines.addFlowPoint(command.getRequest().getRequestId(), new FlowPointData(FlowPointData.FlowPoint.NioClientProxy_Execute, System.currentTimeMillis()));
+        }
     }
 
     /**

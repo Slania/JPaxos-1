@@ -13,6 +13,8 @@ import lsr.common.Pair;
 import lsr.common.Reply;
 import lsr.common.SingleThreadDispatcher;
 import lsr.paxos.Snapshot;
+import lsr.paxos.test.statistics.FlowPointData;
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import lsr.service.Service;
 
 import org.slf4j.Logger;
@@ -179,7 +181,13 @@ public class ServiceProxy implements SnapshotListener {
                         (nextSeqNo - 1));
                 nanos = System.nanoTime();
             }
+            synchronized (ReplicaRequestTimelines.lock) {
+                ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Service_Execute_Start, System.currentTimeMillis()));
+            }
             byte[] result = service.execute(request.getValue(), nextSeqNo - 1);
+            synchronized (ReplicaRequestTimelines.lock) {
+                ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Service_Execute_Finish, System.currentTimeMillis()));
+            }
             if (logger.isDebugEnabled(processDescriptor.logMark_OldBenchmark)) {
                 nanos = System.nanoTime() - nanos;
                 logger.debug(processDescriptor.logMark_OldBenchmark,

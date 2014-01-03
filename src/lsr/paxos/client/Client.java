@@ -22,6 +22,8 @@ import lsr.common.PID;
 import lsr.common.Reply;
 import lsr.common.RequestId;
 
+import lsr.paxos.test.statistics.FlowPointData;
+import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -163,6 +165,8 @@ public class Client {
      */
     public Client() throws IOException {
         this(new Configuration());
+        Thread requestTimeline = new Thread(new ReplicaRequestTimelines());
+        requestTimeline.start();
     }
 
     private RequestId nextRequestId() {
@@ -191,12 +195,18 @@ public class Client {
         while (true) {
             try {
                 logger.debug("Sending {}", request.getRequestId());
-
+                synchronized (ReplicaRequestTimelines.lock) {
+                    ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Client_Send_Request, System.currentTimeMillis()));
+                }
                 output.write(requestBA);
                 output.flush();
 
                 // Blocks only for socket timeout
                 ClientReply clientReply = new ClientReply(input);
+
+                synchronized (ReplicaRequestTimelines.lock) {
+                    ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Client_Receive_Reply, System.currentTimeMillis()));
+                }
 
                 switch (clientReply.getResult()) {
                     case OK:
