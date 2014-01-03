@@ -223,6 +223,7 @@ public class Client {
                         // time
 
                         updateTimeout();
+                        ReplicaRequestTimelines.finishedRequestIds.add(request.getRequestId());
                         return reply.getValue();
 
                     case REDIRECT:
