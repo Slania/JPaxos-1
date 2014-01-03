@@ -67,6 +67,8 @@ public class ReplicaRequestTimelines implements Runnable{
                 logFLowPoints(finishedRequestId);
                 logger.info("********************************************");
             }
+            /* All logged, clear*/
+            finishedRequestIds = new ArrayList<RequestId>();
         }
     }
 }
