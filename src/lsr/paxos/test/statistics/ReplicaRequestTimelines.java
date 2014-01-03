@@ -61,14 +61,18 @@ public class ReplicaRequestTimelines implements Runnable{
     public void run() {
         logger.info("******* Replica Request Timelines started *******");
         while (true) {
-            for (RequestId finishedRequestId : finishedRequestIds) {
-                logger.info("********************************************");
-                logger.info("****** Replica Request Id: " + finishedRequestId.toString() + " ******");
-                logFLowPoints(finishedRequestId);
-                logger.info("********************************************");
+            synchronized (ReplicaRequestTimelines.lock) {
+                for (RequestId finishedRequestId : finishedRequestIds) {
+                    logger.info("********************************************");
+                    logger.info("****** Replica Request Id: " + finishedRequestId.toString() + " ******");
+                    logFLowPoints(finishedRequestId);
+                    logger.info("********************************************");
+                }
+                /* All logged, clear*/
             }
-            /* All logged, clear*/
-            finishedRequestIds = new ArrayList<RequestId>();
+            synchronized (ReplicaRequestTimelines.lock) {
+                finishedRequestIds = new ArrayList<RequestId>();
+            }
         }
     }
 }
