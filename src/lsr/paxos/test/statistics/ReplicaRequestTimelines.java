@@ -1,7 +1,5 @@
 package lsr.paxos.test.statistics;
 
-import com.sun.org.apache.bcel.internal.generic.NEW;
-import lsr.common.ProcessDescriptor;
 import lsr.common.RequestId;
 import lsr.paxos.replica.ClientBatchID;
 
@@ -19,9 +17,7 @@ public class ReplicaRequestTimelines implements Runnable{
     public static HashMap<ClientBatchID, List<FlowPointData>> batchFlowMap = new HashMap<ClientBatchID, List<FlowPointData>>();
     public static HashMap<RequestId, List<FlowPointData>> requestFlowMap = new HashMap<RequestId, List<FlowPointData>>();
 
-    public static List<RequestId> finishedRequests = new ArrayList<RequestId>();
-
-    public static final int processId = ProcessDescriptor.getInstance().localId;
+    public static List<RequestId> finishedRequestIds = new ArrayList<RequestId>();
 
     public static Long skew = (long) 0;
 
@@ -63,8 +59,12 @@ public class ReplicaRequestTimelines implements Runnable{
 
     @Override
     public void run() {
-        for (RequestId finishedRequest : finishedRequests) {
-            logFLowPoints(finishedRequest);
+        logger.info("******* Replica Request Timelines started *******");
+        for (RequestId finishedRequestId : finishedRequestIds) {
+            logger.info("********************************************");
+            logger.info("****** Replica Request Id: " + finishedRequestId.toString() + " ******");
+            logFLowPoints(finishedRequestId);
+            logger.info("********************************************");
         }
     }
 }

@@ -168,7 +168,7 @@ public class DecideCallbackImpl implements DecideCallback {
             replica.instanceExecuted(executeUB, requests);
             for (ClientRequest clientRequest : requests) {
                 synchronized (ReplicaRequestTimelines.lock) {
-                    ReplicaRequestTimelines.finishedRequests.add(clientRequest.getRequestId());
+                    ReplicaRequestTimelines.finishedRequestIds.add(clientRequest.getRequestId());
                 }
             }
             synchronized (decidedWaitingExecution) {
