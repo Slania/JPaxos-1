@@ -191,6 +191,9 @@ public class Client {
 
         try {
             DirectoryServiceCommand directoryServiceCommand = new DirectoryServiceCommand(bytes);
+            if (directoryServiceCommand.getDirectoryCommandType().equals(DirectoryServiceCommand.DirectoryCommandType.INSERT) ||
+                directoryServiceCommand.getDirectoryCommandType().equals(DirectoryServiceCommand.DirectoryCommandType.DELETE) ||
+                directoryServiceCommand.getDirectoryCommandType().equals(DirectoryServiceCommand.DirectoryCommandType.READ))
             ReplicaRequestTimelines.addRequest(request.getRequestId(), directoryServiceCommand.toString());
         } catch (IOException e) {
             e.printStackTrace();
