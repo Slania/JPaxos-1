@@ -193,6 +193,7 @@ public class ReplicaRequestTimelines implements Runnable{
                         preparedStatement = connection.prepareStatement(initSql);
                         preparedStatement.setString(1, finishedRequestId.toString());
                         preparedStatement.setString(2, replicaId);
+                        preparedStatement.executeUpdate();
                         logger.info("********************************************");
                         logger.info("****** Replica Request Id: " + finishedRequestId.toString() + " ******");
                         logFLowPoints(finishedRequestId);
