@@ -22,6 +22,7 @@ import lsr.common.PID;
 import lsr.common.Reply;
 import lsr.common.RequestId;
 
+import lsr.paxos.test.directory.DirectoryServiceCommand;
 import lsr.paxos.test.statistics.FlowPointData;
 import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
@@ -187,6 +188,14 @@ public class Client {
         ClientCommand command = new ClientCommand(CommandType.REQUEST, request);
         ByteBuffer bb = ByteBuffer.allocate(command.byteSize());
         command.writeTo(bb);
+
+        try {
+            DirectoryServiceCommand directoryServiceCommand = new DirectoryServiceCommand(bytes);
+            ReplicaRequestTimelines.addRequest(request.getRequestId(), directoryServiceCommand.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         bb.flip();
         byte[] requestBA = bb.array();
 

@@ -234,6 +234,9 @@ public class DirectoryServiceCommand implements Serializable {
     }
 
     public String getOldReplicaSetAsCsv() {
+        if (oldReplicaSet.isEmpty()) {
+            return "<empty/not-specified>";
+        }
         StringBuilder builder = new StringBuilder();
 
         for (Integer integer : oldReplicaSet) {
@@ -245,9 +248,11 @@ public class DirectoryServiceCommand implements Serializable {
     }
 
     public String getNewReplicaSetAsCsv() {
+        if (newReplicaSet.isEmpty()) {
+            return "<empty/not-specified>";
+        }
         StringBuilder builder = new StringBuilder();
 
-        builder = new StringBuilder();
         for (Integer integer : newReplicaSet) {
             builder.append(integer.toString());
             builder.append(",");
