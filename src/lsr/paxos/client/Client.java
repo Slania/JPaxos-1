@@ -23,6 +23,7 @@ import lsr.common.Reply;
 import lsr.common.RequestId;
 
 import lsr.paxos.test.directory.DirectoryServiceCommand;
+import lsr.paxos.test.map.MapServiceCommand;
 import lsr.paxos.test.statistics.FlowPointData;
 import lsr.paxos.test.statistics.ReplicaRequestTimelines;
 import org.slf4j.Logger;
@@ -191,12 +192,17 @@ public class Client {
 
         try {
             DirectoryServiceCommand directoryServiceCommand = new DirectoryServiceCommand(bytes);
-            if (directoryServiceCommand.getDirectoryCommandType().equals(DirectoryServiceCommand.DirectoryCommandType.INSERT) ||
-                directoryServiceCommand.getDirectoryCommandType().equals(DirectoryServiceCommand.DirectoryCommandType.DELETE) ||
-                directoryServiceCommand.getDirectoryCommandType().equals(DirectoryServiceCommand.DirectoryCommandType.READ))
-            ReplicaRequestTimelines.addRequest(request.getRequestId(), directoryServiceCommand.toString());
+                ReplicaRequestTimelines.addRequest(request.getRequestId(), directoryServiceCommand.toString());
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (ClassCastException castException) {
+            /* if it's not a DirectoryServiceCommand, got to be a map*/
+            try {
+                MapServiceCommand mapServiceCommand = new MapServiceCommand(bytes);
+                ReplicaRequestTimelines.addRequest(request.getRequestId(), mapServiceCommand.toString());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         bb.flip();

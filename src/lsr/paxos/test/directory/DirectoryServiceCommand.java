@@ -190,6 +190,11 @@ public class DirectoryServiceCommand implements Serializable {
                 System.out.println("Object Id: " + new String(objectId));
                 break;
             }
+            default: {
+                System.out.println("Unknown directory command type");
+                throw new ClassCastException();
+            }
+
         }
     }
 
@@ -362,7 +367,37 @@ public class DirectoryServiceCommand implements Serializable {
     }
 
     public String toString() {
-        return "Object " + new String(objectId) + " migrating from " + getOldReplicaSetAsCsv() + " to " + getNewReplicaSetAsCsv() + ". Migration status: " + migrationComplete;
+        switch (directoryCommandType) {
+            case REGISTER_DIRECTORY: {
+                return "Register directory: " + new String(directoryNodeIP) + ":" + directoryNodePort;
+            }
+            case REGISTER_MIGRATION_AGENT: {
+                return "Register migration agent: " + new String(directoryNodeIP) + ":" + directoryNodePort;
+            }
+            case MIGRATION_AGENT_ACK: {
+                return "Ack from migration agent: " + new String(directoryNodeIP) + ":" + directoryNodePort + "for object " + new String(objectId);
+            }
+            case DELETE: {
+                return "Delete object" + new String(objectId);
+            }
+            case READ: {
+                return "Read status for object " + new String(objectId);
+            }
+            case INSERT: {
+                return "Object " + new String(objectId) + " migrating from " + getOldReplicaSetAsCsv() + " to " + getNewReplicaSetAsCsv() + ". Migration status: " + migrationComplete;
+            }
+            case UPDATE_MIGRATION_COMPLETE: {
+                return "Directory acks for object " + new String(objectId) + ":" + new String(migrationAcks) + ", migration complete: " + migrationComplete;
+            }
+            case UPDATE_MIGRATED: {
+                return "Object " + new String(objectId) + " migrated: " + migrated;
+            }
+            case UPDATE_MIGRATION_TIMESTAMP: {
+                return "Updated migration timestamp " +  new String(migrationTimestamp) + " for object " + new String(objectId);
+            }
+            default:
+                return "Unknown directory command type";
+        }
     }
 
     @Override

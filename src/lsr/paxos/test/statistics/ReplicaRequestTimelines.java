@@ -18,7 +18,7 @@ import java.util.logging.Logger;
 
 public class ReplicaRequestTimelines implements Runnable{
 
-    String initSql = "insert into instrumentation(request_id, replica_id) values(?,?)";
+    String initSql = "insert into instrumentation(request_id, replica_id, request) values(?,?,?)";
     String client_send_request_sql = "update instrumentation set client_send_request = ? where request_id = ? and replica_id = ?";
     String client_receive_reply_sql = "update instrumentation set client_receive_reply = ? where request_id = ? and replica_id = ?";
     String nioclientproxy_execute_sql = "update instrumentation set nioclientproxy_execute = ? where request_id = ? and replica_id = ?";
@@ -149,10 +149,9 @@ public class ReplicaRequestTimelines implements Runnable{
                 preparedStatement.setString(2, requestId.toString());
                 preparedStatement.setString(3, replicaId);
 
-                preparedStatement.addBatch();
+                preparedStatement.executeUpdate();
                 logger.info("*******" + flowPoint.toString() + "*******");
             }
-            preparedStatement.executeBatch();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -193,7 +192,9 @@ public class ReplicaRequestTimelines implements Runnable{
                         preparedStatement = connection.prepareStatement(initSql);
                         preparedStatement.setString(1, finishedRequestId.toString());
                         preparedStatement.setString(2, replicaId);
+                        preparedStatement.setString(3, requestIdNameMap.get(finishedRequestId));
                         preparedStatement.executeUpdate();
+                        requestIdNameMap.remove(finishedRequestId);
                         logger.info("********************************************");
                         logger.info("****** Replica Request Id: " + finishedRequestId.toString() + " ******");
                         logFLowPoints(finishedRequestId);
