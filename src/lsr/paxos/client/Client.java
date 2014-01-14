@@ -194,7 +194,13 @@ public class Client {
             DirectoryServiceCommand directoryServiceCommand = new DirectoryServiceCommand(bytes);
                 ReplicaRequestTimelines.addRequest(request.getRequestId(), directoryServiceCommand.toString());
         } catch (IOException e) {
-            e.printStackTrace();
+            try {
+                /* if it's not a DirectoryServiceCommand, got to be a map*/
+                MapServiceCommand mapServiceCommand = new MapServiceCommand(bytes);
+                ReplicaRequestTimelines.addRequest(request.getRequestId(), mapServiceCommand.toString());
+            } catch (IOException excp) {
+                excp.printStackTrace();
+            }
         } catch (ClassCastException castException) {
             /* if it's not a DirectoryServiceCommand, got to be a map*/
             try {
