@@ -98,11 +98,12 @@ public class DirectoryService extends SimplifiedService {
 
                 try {
                     connection = DriverManager.getConnection(url, user, password);
-                    String sql = "UPDATE migrations SET migration_acks = ?, migration_complete = ? where object_id = ?";
+                    String sql = "UPDATE migrations SET migration_acks = ?, migration_complete = ?, completion_time = ? where object_id = ?";
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.setString(1, new String(command.getMigrationAcks()));
                     preparedStatement.setBoolean(2, command.isMigrationComplete());
-                    preparedStatement.setString(3, new String(command.getObjectId()));
+                    preparedStatement.setTimestamp(3, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
+                    preparedStatement.setString(4, new String(command.getObjectId()));
                     preparedStatement.executeUpdate();
                 } catch (SQLException e) {
                     e.printStackTrace();
