@@ -488,6 +488,32 @@ public class DirectoryService extends SimplifiedService {
 
             insertStatement.executeBatch();
 
+            tableName = "migration_agents";
+
+            selectStatement = sourceConnection.prepareStatement("SELECT * FROM " + tableName);
+            deleteStatement = sourceConnection.prepareStatement("DELETE FROM" + tableName);
+            resultSet = selectStatement.executeQuery();
+
+            insertStatement = destinationConnection.prepareStatement(createInsertSql(resultSet.getMetaData()));
+
+            deleteStatement.execute();
+
+            batchSize = 0;
+            while (resultSet.next())
+            {
+                setParameters(insertStatement, resultSet);
+                insertStatement.addBatch();
+                batchSize++;
+
+                if (batchSize >= BATCH_EXECUTE_SIZE)
+                {
+                    insertStatement.executeBatch();
+                    batchSize = 0;
+                }
+            }
+
+            insertStatement.executeBatch();
+
         } catch (SQLException e) {
             e.printStackTrace();
         } finally
