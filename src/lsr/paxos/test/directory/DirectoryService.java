@@ -382,6 +382,7 @@ public class DirectoryService extends AbstractService {
             preparedStatement.setInt(1, executeSeqNo);
             preparedStatement.setInt(2, id);
             preparedStatement.setInt(3, id);
+            preparedStatement.executeUpdate();
             connection.commit();
 
             lastExecutedSeq = executeSeqNo;
