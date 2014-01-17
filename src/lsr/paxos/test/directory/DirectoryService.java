@@ -1,6 +1,7 @@
 package lsr.paxos.test.directory;
 
 import lsr.common.ProcessDescriptor;
+import lsr.service.AbstractService;
 import lsr.service.SimplifiedService;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -13,7 +14,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class DirectoryService extends SimplifiedService {
+public class DirectoryService extends AbstractService {
 
     private Socket socket;
 
@@ -21,8 +22,26 @@ public class DirectoryService extends SimplifiedService {
 
     private HashMap<DirectoryServiceCommand, Boolean> map = new HashMap<DirectoryServiceCommand, Boolean>();
     private static final int BATCH_EXECUTE_SIZE = 100;
+    private int lastExecutedSeq;
 
-    protected byte[] execute(byte[] value) {
+    String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
+    String user = "postgres";
+    String password = "password";
+
+    private Connection connection = null;
+    private PreparedStatement preparedStatement = null;
+
+    public byte[] execute(byte[] value, int executeSeqNo) {
+
+        if (connection == null) {
+            try {
+                connection = DriverManager.getConnection(url, user, password);
+                connection.setAutoCommit(false);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
 
         logger.info("***** opening properties file ****");
         FileInputStream fis = null;
@@ -43,25 +62,18 @@ public class DirectoryService extends SimplifiedService {
             return null;
         }
 
+        ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
+
         switch (command.getDirectoryCommandType()) {
             case INSERT: {
                 Boolean migrationStatus = command.isMigrationComplete();
                 map.put(command, migrationStatus);
 
-                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
                 DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
 
                 logger.info(command.toString());
 
-                Connection connection = null;
-                PreparedStatement preparedStatement = null;
-
-                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
-                String user = "postgres";
-                String password = "password";
-
                 try {
-                    connection = DriverManager.getConnection(url, user, password);
                     String sql = "INSERT INTO migrations(object_id, old_replica_set, new_replica_set, migration_complete, creation_time) VALUES(?, ?, ?, ?, ?)";
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.setString(1, new String(command.getObjectId()));
@@ -72,6 +84,11 @@ public class DirectoryService extends SimplifiedService {
                     preparedStatement.executeUpdate();
                 } catch (SQLException e) {
                     e.printStackTrace();
+                    try {
+                        connection.close();
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();
+                    }
                     return null;
                 }
 
@@ -81,23 +98,13 @@ public class DirectoryService extends SimplifiedService {
                     e.printStackTrace();
                     return null;
                 }
-
-                return byteArrayOutput.toByteArray();
+                break;
             }
 
             case UPDATE_MIGRATION_COMPLETE: {
-                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
                 DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
 
-                Connection connection = null;
-                PreparedStatement preparedStatement = null;
-
-                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
-                String user = "postgres";
-                String password = "password";
-
                 try {
-                    connection = DriverManager.getConnection(url, user, password);
                     String sql = "UPDATE migrations SET migration_acks = ?, migration_complete = ?, completion_time = ? where object_id = ?";
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.setString(1, new String(command.getMigrationAcks()));
@@ -114,25 +121,20 @@ public class DirectoryService extends SimplifiedService {
                     dataOutput.writeInt(1);
                 } catch (IOException e) {
                     e.printStackTrace();
+                    try {
+                        connection.close();
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();
+                    }
                     return null;
                 }
-
-                return byteArrayOutput.toByteArray();
+                break;
             }
 
             case UPDATE_MIGRATED: {
-                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
                 DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
 
-                Connection connection = null;
-                PreparedStatement preparedStatement = null;
-
-                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
-                String user = "postgres";
-                String password = "password";
-
                 try {
-                    connection = DriverManager.getConnection(url, user, password);
                     String sql = "UPDATE migrations SET migrated = ? where object_id = ?";
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.setBoolean(1, command.isMigrated());
@@ -147,25 +149,20 @@ public class DirectoryService extends SimplifiedService {
                     dataOutput.writeInt(1);
                 } catch (IOException e) {
                     e.printStackTrace();
+                    try {
+                        connection.close();
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();
+                    }
                     return null;
                 }
-
-                return byteArrayOutput.toByteArray();
+                break;
             }
 
             case UPDATE_MIGRATION_TIMESTAMP: {
-                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
                 DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
 
-                Connection connection = null;
-                PreparedStatement preparedStatement = null;
-
-                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
-                String user = "postgres";
-                String password = "password";
-
                 try {
-                    connection = DriverManager.getConnection(url, user, password);
                     String sql = "UPDATE migrations SET migration_started_timestamp = ? where object_id = ?";
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.setTimestamp(1, Timestamp.valueOf(new String(command.getMigrationTimestamp())));
@@ -173,6 +170,11 @@ public class DirectoryService extends SimplifiedService {
                     preparedStatement.executeUpdate();
                 } catch (SQLException e) {
                     e.printStackTrace();
+                    try {
+                        connection.close();
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();
+                    }
                     return null;
                 }
 
@@ -182,23 +184,13 @@ public class DirectoryService extends SimplifiedService {
                     e.printStackTrace();
                     return null;
                 }
-
-                return byteArrayOutput.toByteArray();
+                break;
             }
 
             case READ: {
-                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
                 DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
 
-                Connection connection = null;
-                PreparedStatement preparedStatement = null;
-
-                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
-                String user = "postgres";
-                String password = "password";
-
                 try {
-                    connection = DriverManager.getConnection(url, user, password);
                     String sql = "SELECT object_id, old_replica_set, new_replica_set, migration_acks, migration_complete from migrations where object_id = ?";
                     preparedStatement = connection.prepareStatement(sql);
                     preparedStatement.setString(1, new String(command.getObjectId()));
@@ -213,29 +205,24 @@ public class DirectoryService extends SimplifiedService {
                             e.printStackTrace();
                             return null;
                         }
-
-                        return byteArrayOutput.toByteArray();
                     }
 
                 } catch (SQLException e) {
                     e.printStackTrace();
+                    try {
+                        connection.close();
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();
+                    }
                     return null;
                 }
+                break;
             }
 
             case REGISTER_DIRECTORY: {
-                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
                 DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
 
-                Connection connection = null;
-                PreparedStatement preparedStatement = null;
-
-                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
-                String user = "postgres";
-                String password = "password";
-
                 try {
-                    connection = DriverManager.getConnection(url, user, password);
                     String update = "UPDATE directories SET time_stamp = ? WHERE ip = ? AND port = ?";
                     String insert = "INSERT INTO directories(ip, port, time_stamp) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM directories WHERE ip = ? AND port = ?)";
                     preparedStatement = connection.prepareStatement(update);
@@ -252,6 +239,11 @@ public class DirectoryService extends SimplifiedService {
                     preparedStatement.executeUpdate();
                 } catch (SQLException e) {
                     e.printStackTrace();
+                    try {
+                        connection.close();
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();
+                    }
                     return null;
                 }
 
@@ -261,23 +253,13 @@ public class DirectoryService extends SimplifiedService {
                     e.printStackTrace();
                     return null;
                 }
-
-                return byteArrayOutput.toByteArray();
+                break;
             }
 
             case REGISTER_MIGRATION_AGENT: {
-                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
                 DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
 
-                Connection connection = null;
-                PreparedStatement preparedStatement = null;
-
-                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
-                String user = "postgres";
-                String password = "password";
-
                 try {
-                    connection = DriverManager.getConnection(url, user, password);
                     String update = "UPDATE migration_agents SET time_stamp = ? WHERE ip = ? AND port = ?";
                     String insert = "INSERT INTO migration_agents(ip, port, time_stamp) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM migration_agents WHERE ip = ? AND port = ?)";
                     preparedStatement = connection.prepareStatement(update);
@@ -294,6 +276,11 @@ public class DirectoryService extends SimplifiedService {
                     preparedStatement.executeUpdate();
                 } catch (SQLException e) {
                     e.printStackTrace();
+                    try {
+                        connection.close();
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();
+                    }
                     return null;
                 }
 
@@ -303,23 +290,13 @@ public class DirectoryService extends SimplifiedService {
                     e.printStackTrace();
                     return null;
                 }
-
-                return byteArrayOutput.toByteArray();
+                break;
             }
 
-            case MIGRATION_AGENT_ACK:
-                ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
+            case MIGRATION_AGENT_ACK: {
                 DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
 
-                Connection connection = null;
-                PreparedStatement preparedStatement = null;
-
-                String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
-                String user = "postgres";
-                String password = "password";
-
                 try {
-                    connection = DriverManager.getConnection(url, user, password);
                     String fetchId = "SELECT id FROM migration_agents WHERE ip = ? AND port = ?";
                     String fetchMigration = "SELECT migration_progress_acks, migrated FROM migrations WHERE object_id = ? and migration_complete = false";
                     preparedStatement = connection.prepareStatement(fetchId);
@@ -380,15 +357,58 @@ public class DirectoryService extends SimplifiedService {
                         return null;
                     }
 
-                    return byteArrayOutput.toByteArray();
-
                 } catch (SQLException e) {
                     e.printStackTrace();
+                    try {
+                        connection.close();
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();
+                    }
                     return null;
                 }
-
+                break;
+            }
         }
-        return null;
+
+        try {
+            int id = 1;
+            String insertSql = "INSERT INTO configuration(latest_sequence_number, id) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM configuration WHERE id = ?)";
+            String updateSql = "UPDATE configuration SET latest_sequence_number = ? WHERE id = ?";
+            preparedStatement = connection.prepareStatement(updateSql);
+            preparedStatement.setInt(1 , executeSeqNo);
+            preparedStatement.setInt(2, id);
+            preparedStatement.executeUpdate();
+            preparedStatement = connection.prepareStatement(insertSql);
+            preparedStatement.setInt(1 , executeSeqNo);
+            preparedStatement.setInt(2, id);
+            preparedStatement.setInt(3, id);
+            connection.commit();
+
+            lastExecutedSeq = executeSeqNo;
+            preparedStatement.close();
+            return byteArrayOutput.toByteArray();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+    }
+
+    @Override
+    public void askForSnapshot(int lastSnapshotNextRequestSeqNo) {
+        forceSnapshot(lastSnapshotNextRequestSeqNo);
+    }
+
+    @Override
+    public void forceSnapshot(int lastSnapshotNextRequestSeqNo) {
+        byte[] snapshot = makeSnapshot();
+        fireSnapshotMade(lastExecutedSeq + 1, snapshot, null);
+    }
+
+    @Override
+    public void updateToSnapshot(int nextRequestSeqNo, byte[] snapshot) {
+        lastExecutedSeq = nextRequestSeqNo - 1;
+        updateToSnapshot(snapshot);
     }
 
     protected byte[] makeSnapshot() {
@@ -489,6 +509,32 @@ public class DirectoryService extends SimplifiedService {
             insertStatement.executeBatch();
 
             tableName = "migration_agents";
+
+            selectStatement = sourceConnection.prepareStatement("SELECT * FROM " + tableName);
+            deleteStatement = sourceConnection.prepareStatement("DELETE FROM" + tableName);
+            resultSet = selectStatement.executeQuery();
+
+            insertStatement = destinationConnection.prepareStatement(createInsertSql(resultSet.getMetaData()));
+
+            deleteStatement.execute();
+
+            batchSize = 0;
+            while (resultSet.next())
+            {
+                setParameters(insertStatement, resultSet);
+                insertStatement.addBatch();
+                batchSize++;
+
+                if (batchSize >= BATCH_EXECUTE_SIZE)
+                {
+                    insertStatement.executeBatch();
+                    batchSize = 0;
+                }
+            }
+
+            insertStatement.executeBatch();
+
+            tableName = "configuration";
 
             selectStatement = sourceConnection.prepareStatement("SELECT * FROM " + tableName);
             deleteStatement = sourceConnection.prepareStatement("DELETE FROM" + tableName);
