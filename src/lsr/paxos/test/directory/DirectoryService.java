@@ -24,24 +24,9 @@ public class DirectoryService extends AbstractService {
     private static final int BATCH_EXECUTE_SIZE = 100;
     private int lastExecutedSeq;
 
-    String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
-    String user = "postgres";
-    String password = "password";
-
     private Connection connection = null;
-    private PreparedStatement preparedStatement = null;
 
     public byte[] execute(byte[] value, int executeSeqNo) {
-
-        if (connection == null) {
-            try {
-                connection = DriverManager.getConnection(url, user, password);
-                connection.setAutoCommit(false);
-            } catch (SQLException e) {
-                e.printStackTrace();
-                return null;
-            }
-        }
 
         logger.info("***** opening properties file ****");
         FileInputStream fis = null;
@@ -51,6 +36,20 @@ public class DirectoryService extends AbstractService {
             fis.close();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+
+        String url = "jdbc:postgresql://" + configuration.getProperty("db." + ProcessDescriptor.getInstance().localId);
+        String user = "postgres";
+        String password = "password";
+
+        if (connection == null) {
+            try {
+                connection = DriverManager.getConnection(url, user, password);
+                connection.setAutoCommit(false);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return null;
+            }
         }
 
         logger.info("******** in execute method of DirectoryService at time: " + System.currentTimeMillis() + " ********");
@@ -64,6 +63,7 @@ public class DirectoryService extends AbstractService {
 
         ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
 
+        PreparedStatement preparedStatement = null;
         switch (command.getDirectoryCommandType()) {
             case INSERT: {
                 Boolean migrationStatus = command.isMigrationComplete();
@@ -375,11 +375,11 @@ public class DirectoryService extends AbstractService {
             String insertSql = "INSERT INTO configuration(latest_sequence_number, id) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM configuration WHERE id = ?)";
             String updateSql = "UPDATE configuration SET latest_sequence_number = ? WHERE id = ?";
             preparedStatement = connection.prepareStatement(updateSql);
-            preparedStatement.setInt(1 , executeSeqNo);
+            preparedStatement.setInt(1, executeSeqNo);
             preparedStatement.setInt(2, id);
             preparedStatement.executeUpdate();
             preparedStatement = connection.prepareStatement(insertSql);
-            preparedStatement.setInt(1 , executeSeqNo);
+            preparedStatement.setInt(1, executeSeqNo);
             preparedStatement.setInt(2, id);
             preparedStatement.setInt(3, id);
             connection.commit();
