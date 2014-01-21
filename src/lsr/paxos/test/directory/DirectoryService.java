@@ -27,7 +27,7 @@ public class DirectoryService extends AbstractService {
     private Connection connection = null;
 
     public byte[] execute(byte[] value, int executeSeqNo) {
-
+        logger.info("***** execute sequence number : " + executeSeqNo + " ******");
         logger.info("***** opening properties file ****");
         FileInputStream fis = null;
         try {
@@ -52,345 +52,364 @@ public class DirectoryService extends AbstractService {
             }
         }
 
-        logger.info("******** in execute method of DirectoryService at time: " + System.currentTimeMillis() + " ********");
-        DirectoryServiceCommand command;
+        String lastExecutedRequestSql = "SELECT latest_sequence_number from configuration where id = 1";
+        PreparedStatement preparedStatement = null;
+        int latestCompletedRequest = -1;
         try {
-            command = new DirectoryServiceCommand(value);
-        } catch (IOException e) {
-            logger.log(Level.WARNING, "Incorrect request", e);
-            return null;
+            preparedStatement = connection.prepareStatement(lastExecutedRequestSql);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            latestCompletedRequest = resultSet.getInt(1);
+            if (resultSet.wasNull()) {
+                latestCompletedRequest = -1;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
 
-        ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
-
-        PreparedStatement preparedStatement = null;
-        switch (command.getDirectoryCommandType()) {
-            case INSERT: {
-                Boolean migrationStatus = command.isMigrationComplete();
-                map.put(command, migrationStatus);
-
-                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
-
-                logger.info(command.toString());
-
-                try {
-                    String sql = "INSERT INTO migrations(object_id, old_replica_set, new_replica_set, migration_complete, creation_time) VALUES(?, ?, ?, ?, ?)";
-                    preparedStatement = connection.prepareStatement(sql);
-                    preparedStatement.setString(1, new String(command.getObjectId()));
-                    preparedStatement.setString(2, command.getOldReplicaSetAsCsv());
-                    preparedStatement.setString(3, command.getNewReplicaSetAsCsv());
-                    preparedStatement.setBoolean(4, command.isMigrationComplete());
-                    preparedStatement.setTimestamp(5, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
-                    preparedStatement.executeUpdate();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    try {
-                        connection.close();
-                    } catch (SQLException e1) {
-                        e1.printStackTrace();
-                    }
-                    return null;
-                }
-
-                try {
-                    dataOutput.write(command.toString().getBytes());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return null;
-                }
-                break;
+        logger.info("***** last executed request sequence number : " + latestCompletedRequest + " ******");
+        if (executeSeqNo > latestCompletedRequest) {
+            logger.info("******** in execute method of DirectoryService at time: " + System.currentTimeMillis() + " ********");
+            DirectoryServiceCommand command;
+            try {
+                command = new DirectoryServiceCommand(value);
+            } catch (IOException e) {
+                logger.log(Level.WARNING, "Incorrect request", e);
+                return null;
             }
 
-            case UPDATE_MIGRATION_COMPLETE: {
-                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+            ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
 
-                try {
-                    String sql = "UPDATE migrations SET migration_acks = ?, migration_complete = ?, completion_time = ? where object_id = ?";
-                    preparedStatement = connection.prepareStatement(sql);
-                    preparedStatement.setString(1, new String(command.getMigrationAcks()));
-                    preparedStatement.setBoolean(2, command.isMigrationComplete());
-                    preparedStatement.setTimestamp(3, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
-                    preparedStatement.setString(4, new String(command.getObjectId()));
-                    preparedStatement.executeUpdate();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    return null;
-                }
+            switch (command.getDirectoryCommandType()) {
+                case INSERT: {
+                    Boolean migrationStatus = command.isMigrationComplete();
+                    map.put(command, migrationStatus);
 
-                try {
-                    dataOutput.writeInt(1);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                    logger.info(command.toString());
+
                     try {
-                        connection.close();
-                    } catch (SQLException e1) {
-                        e1.printStackTrace();
-                    }
-                    return null;
-                }
-                break;
-            }
-
-            case UPDATE_MIGRATED: {
-                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
-
-                try {
-                    String sql = "UPDATE migrations SET migrated = ? where object_id = ?";
-                    preparedStatement = connection.prepareStatement(sql);
-                    preparedStatement.setBoolean(1, command.isMigrated());
-                    preparedStatement.setString(2, new String(command.getObjectId()));
-                    preparedStatement.executeUpdate();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    return null;
-                }
-
-                try {
-                    dataOutput.writeInt(1);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    try {
-                        connection.close();
-                    } catch (SQLException e1) {
-                        e1.printStackTrace();
-                    }
-                    return null;
-                }
-                break;
-            }
-
-            case UPDATE_MIGRATION_TIMESTAMP: {
-                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
-
-                try {
-                    String sql = "UPDATE migrations SET migration_started_timestamp = ? where object_id = ?";
-                    preparedStatement = connection.prepareStatement(sql);
-                    preparedStatement.setTimestamp(1, Timestamp.valueOf(new String(command.getMigrationTimestamp())));
-                    preparedStatement.setString(2, new String(command.getObjectId()));
-                    preparedStatement.executeUpdate();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    try {
-                        connection.close();
-                    } catch (SQLException e1) {
-                        e1.printStackTrace();
-                    }
-                    return null;
-                }
-
-                try {
-                    dataOutput.writeInt(1);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return null;
-                }
-                break;
-            }
-
-            case READ: {
-                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
-
-                try {
-                    String sql = "SELECT object_id, old_replica_set, new_replica_set, migration_acks, migration_complete from migrations where object_id = ?";
-                    preparedStatement = connection.prepareStatement(sql);
-                    preparedStatement.setString(1, new String(command.getObjectId()));
-                    ResultSet rs = preparedStatement.executeQuery();
-
-                    while (rs.next()) {
-                        String response = "";
-                        response += "Object " + rs.getString(1) + " migrating from " + rs.getString(2) + " to " + rs.getString(3) + ". Acks received from directories: " + rs.getString(4)+ ". Migration status: " + rs.getBoolean(5);
+                        String sql = "INSERT INTO migrations(object_id, old_replica_set, new_replica_set, migration_complete, creation_time) VALUES(?, ?, ?, ?, ?)";
+                        preparedStatement = connection.prepareStatement(sql);
+                        preparedStatement.setString(1, new String(command.getObjectId()));
+                        preparedStatement.setString(2, command.getOldReplicaSetAsCsv());
+                        preparedStatement.setString(3, command.getNewReplicaSetAsCsv());
+                        preparedStatement.setBoolean(4, command.isMigrationComplete());
+                        preparedStatement.setTimestamp(5, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
+                        preparedStatement.executeUpdate();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
                         try {
-                            dataOutput.write(response.getBytes());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            return null;
+                            connection.close();
+                        } catch (SQLException e1) {
+                            e1.printStackTrace();
                         }
-                    }
-
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    try {
-                        connection.close();
-                    } catch (SQLException e1) {
-                        e1.printStackTrace();
-                    }
-                    return null;
-                }
-                break;
-            }
-
-            case REGISTER_DIRECTORY: {
-                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
-
-                try {
-                    String update = "UPDATE directories SET time_stamp = ? WHERE ip = ? AND port = ?";
-                    String insert = "INSERT INTO directories(ip, port, time_stamp) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM directories WHERE ip = ? AND port = ?)";
-                    preparedStatement = connection.prepareStatement(update);
-                    preparedStatement.setTimestamp(1, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
-                    preparedStatement.setString(2, new String(command.getDirectoryNodeIP()));
-                    preparedStatement.setInt(3, command.getDirectoryNodePort());
-                    preparedStatement.executeUpdate();
-                    preparedStatement = connection.prepareStatement(insert);
-                    preparedStatement.setString(1, new String(command.getDirectoryNodeIP()));
-                    preparedStatement.setInt(2, command.getDirectoryNodePort());
-                    preparedStatement.setTimestamp(3, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
-                    preparedStatement.setString(4, new String(command.getDirectoryNodeIP()));
-                    preparedStatement.setInt(5, command.getDirectoryNodePort());
-                    preparedStatement.executeUpdate();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    try {
-                        connection.close();
-                    } catch (SQLException e1) {
-                        e1.printStackTrace();
-                    }
-                    return null;
-                }
-
-                try {
-                    dataOutput.write("received directory command".getBytes());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return null;
-                }
-                break;
-            }
-
-            case REGISTER_MIGRATION_AGENT: {
-                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
-
-                try {
-                    String update = "UPDATE migration_agents SET time_stamp = ? WHERE ip = ? AND port = ?";
-                    String insert = "INSERT INTO migration_agents(ip, port, time_stamp) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM migration_agents WHERE ip = ? AND port = ?)";
-                    preparedStatement = connection.prepareStatement(update);
-                    preparedStatement.setTimestamp(1, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
-                    preparedStatement.setString(2, new String(command.getDirectoryNodeIP()));
-                    preparedStatement.setInt(3, command.getDirectoryNodePort());
-                    preparedStatement.executeUpdate();
-                    preparedStatement = connection.prepareStatement(insert);
-                    preparedStatement.setString(1, new String(command.getDirectoryNodeIP()));
-                    preparedStatement.setInt(2, command.getDirectoryNodePort());
-                    preparedStatement.setTimestamp(3, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
-                    preparedStatement.setString(4, new String(command.getDirectoryNodeIP()));
-                    preparedStatement.setInt(5, command.getDirectoryNodePort());
-                    preparedStatement.executeUpdate();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    try {
-                        connection.close();
-                    } catch (SQLException e1) {
-                        e1.printStackTrace();
-                    }
-                    return null;
-                }
-
-                try {
-                    dataOutput.write("received migration agent command".getBytes());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return null;
-                }
-                break;
-            }
-
-            case MIGRATION_AGENT_ACK: {
-                DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
-
-                try {
-                    String fetchId = "SELECT id FROM migration_agents WHERE ip = ? AND port = ?";
-                    String fetchMigration = "SELECT migration_progress_acks, migrated FROM migrations WHERE object_id = ? and migration_complete = false";
-                    preparedStatement = connection.prepareStatement(fetchId);
-                    preparedStatement.setString(1, new String(command.getDirectoryNodeIP()));
-                    preparedStatement.setInt(2, command.getDirectoryNodePort());
-                    ResultSet rs = preparedStatement.executeQuery();
-                    int migrationAgentId = -1;
-                    boolean migrated = false;
-                    String migrationProgress = null;
-                    while (rs.next()) {
-                        migrationAgentId = rs.getInt(1);
-                    }
-                    preparedStatement = connection.prepareStatement(fetchMigration);
-                    preparedStatement.setString(1, new String(command.getObjectId()));
-                    rs = preparedStatement.executeQuery();
-                    while (rs.next()) {
-                        migrationProgress = rs.getString(1);
-                        if (rs.wasNull()) {
-                            migrationProgress = null;
-                        }
-                        migrated = rs.getBoolean(2);
-                    }
-                    System.out.println("Object Id: " + command.getObjectId());
-                    System.out.println("Migration Agent IP: " + command.getDirectoryNodeIP());
-                    System.out.println("Migration Agent Port: " + command.getDirectoryNodePort());
-                    System.out.println("Migration Agent ID: " + migrationAgentId);
-                    System.out.println("Migrated: " + migrated);
-                    System.out.println("Migration progress: " + migrationProgress);
-                    if (!migrated) {
-                        if ((migrationProgress != null &&
-                            (
-                                !migrationProgress.contains("," + migrationAgentId + ",") ||
-                                !migrationProgress.contains("," + migrationAgentId) ||
-                                !migrationProgress.contains(migrationAgentId + ",") ||
-                                (!migrationProgress.contains(",") && !migrationProgress.contains(String.valueOf(migrationAgentId)))
-                            ))
-                            ||
-                            migrationProgress == null
-                        ) {
-                            if (migrationProgress != null && migrationProgress.contains(",")) {
-                                migrationProgress += "," + migrationAgentId;
-                            } else {
-                                migrationProgress = String.valueOf(migrationAgentId);
-                            }
-                            logger.info("Migration Acks after update: " + migrationProgress);
-                            String sql = "UPDATE migrations SET migration_progress_acks = ? WHERE object_id = ?";
-                            preparedStatement = connection.prepareStatement(sql);
-                            preparedStatement.setString(1, migrationProgress);
-                            preparedStatement.setString(2, new String(command.getObjectId()));
-                            preparedStatement.executeUpdate();
-                        }
+                        return null;
                     }
 
                     try {
-                        dataOutput.write("received migration agent update".getBytes());
+                        dataOutput.write(command.toString().getBytes());
                     } catch (IOException e) {
                         e.printStackTrace();
                         return null;
                     }
-
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    try {
-                        connection.close();
-                    } catch (SQLException e1) {
-                        e1.printStackTrace();
-                    }
-                    return null;
+                    break;
                 }
-                break;
+
+                case UPDATE_MIGRATION_COMPLETE: {
+                    DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                    try {
+                        String sql = "UPDATE migrations SET migration_acks = ?, migration_complete = ?, completion_time = ? where object_id = ?";
+                        preparedStatement = connection.prepareStatement(sql);
+                        preparedStatement.setString(1, new String(command.getMigrationAcks()));
+                        preparedStatement.setBoolean(2, command.isMigrationComplete());
+                        preparedStatement.setTimestamp(3, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
+                        preparedStatement.setString(4, new String(command.getObjectId()));
+                        preparedStatement.executeUpdate();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+
+                    try {
+                        dataOutput.writeInt(1);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        try {
+                            connection.close();
+                        } catch (SQLException e1) {
+                            e1.printStackTrace();
+                        }
+                        return null;
+                    }
+                    break;
+                }
+
+                case UPDATE_MIGRATED: {
+                    DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                    try {
+                        String sql = "UPDATE migrations SET migrated = ? where object_id = ?";
+                        preparedStatement = connection.prepareStatement(sql);
+                        preparedStatement.setBoolean(1, command.isMigrated());
+                        preparedStatement.setString(2, new String(command.getObjectId()));
+                        preparedStatement.executeUpdate();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+
+                    try {
+                        dataOutput.writeInt(1);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        try {
+                            connection.close();
+                        } catch (SQLException e1) {
+                            e1.printStackTrace();
+                        }
+                        return null;
+                    }
+                    break;
+                }
+
+                case UPDATE_MIGRATION_TIMESTAMP: {
+                    DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                    try {
+                        String sql = "UPDATE migrations SET migration_started_timestamp = ? where object_id = ?";
+                        preparedStatement = connection.prepareStatement(sql);
+                        preparedStatement.setTimestamp(1, Timestamp.valueOf(new String(command.getMigrationTimestamp())));
+                        preparedStatement.setString(2, new String(command.getObjectId()));
+                        preparedStatement.executeUpdate();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        try {
+                            connection.close();
+                        } catch (SQLException e1) {
+                            e1.printStackTrace();
+                        }
+                        return null;
+                    }
+
+                    try {
+                        dataOutput.writeInt(1);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                    break;
+                }
+
+                case READ: {
+                    DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                    try {
+                        String sql = "SELECT object_id, old_replica_set, new_replica_set, migration_acks, migration_complete from migrations where object_id = ?";
+                        preparedStatement = connection.prepareStatement(sql);
+                        preparedStatement.setString(1, new String(command.getObjectId()));
+                        ResultSet rs = preparedStatement.executeQuery();
+
+                        while (rs.next()) {
+                            String response = "";
+                            response += "Object " + rs.getString(1) + " migrating from " + rs.getString(2) + " to " + rs.getString(3) + ". Acks received from directories: " + rs.getString(4)+ ". Migration status: " + rs.getBoolean(5);
+                            try {
+                                dataOutput.write(response.getBytes());
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                                return null;
+                            }
+                        }
+
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        try {
+                            connection.close();
+                        } catch (SQLException e1) {
+                            e1.printStackTrace();
+                        }
+                        return null;
+                    }
+                    break;
+                }
+
+                case REGISTER_DIRECTORY: {
+                    DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                    try {
+                        String update = "UPDATE directories SET time_stamp = ? WHERE ip = ? AND port = ?";
+                        String insert = "INSERT INTO directories(ip, port, time_stamp) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM directories WHERE ip = ? AND port = ?)";
+                        preparedStatement = connection.prepareStatement(update);
+                        preparedStatement.setTimestamp(1, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
+                        preparedStatement.setString(2, new String(command.getDirectoryNodeIP()));
+                        preparedStatement.setInt(3, command.getDirectoryNodePort());
+                        preparedStatement.executeUpdate();
+                        preparedStatement = connection.prepareStatement(insert);
+                        preparedStatement.setString(1, new String(command.getDirectoryNodeIP()));
+                        preparedStatement.setInt(2, command.getDirectoryNodePort());
+                        preparedStatement.setTimestamp(3, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
+                        preparedStatement.setString(4, new String(command.getDirectoryNodeIP()));
+                        preparedStatement.setInt(5, command.getDirectoryNodePort());
+                        preparedStatement.executeUpdate();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        try {
+                            connection.close();
+                        } catch (SQLException e1) {
+                            e1.printStackTrace();
+                        }
+                        return null;
+                    }
+
+                    try {
+                        dataOutput.write("received directory command".getBytes());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                    break;
+                }
+
+                case REGISTER_MIGRATION_AGENT: {
+                    DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                    try {
+                        String update = "UPDATE migration_agents SET time_stamp = ? WHERE ip = ? AND port = ?";
+                        String insert = "INSERT INTO migration_agents(ip, port, time_stamp) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM migration_agents WHERE ip = ? AND port = ?)";
+                        preparedStatement = connection.prepareStatement(update);
+                        preparedStatement.setTimestamp(1, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
+                        preparedStatement.setString(2, new String(command.getDirectoryNodeIP()));
+                        preparedStatement.setInt(3, command.getDirectoryNodePort());
+                        preparedStatement.executeUpdate();
+                        preparedStatement = connection.prepareStatement(insert);
+                        preparedStatement.setString(1, new String(command.getDirectoryNodeIP()));
+                        preparedStatement.setInt(2, command.getDirectoryNodePort());
+                        preparedStatement.setTimestamp(3, Timestamp.valueOf(DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))));
+                        preparedStatement.setString(4, new String(command.getDirectoryNodeIP()));
+                        preparedStatement.setInt(5, command.getDirectoryNodePort());
+                        preparedStatement.executeUpdate();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        try {
+                            connection.close();
+                        } catch (SQLException e1) {
+                            e1.printStackTrace();
+                        }
+                        return null;
+                    }
+
+                    try {
+                        dataOutput.write("received migration agent command".getBytes());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                    break;
+                }
+
+                case MIGRATION_AGENT_ACK: {
+                    DataOutputStream dataOutput = new DataOutputStream(byteArrayOutput);
+
+                    try {
+                        String fetchId = "SELECT id FROM migration_agents WHERE ip = ? AND port = ?";
+                        String fetchMigration = "SELECT migration_progress_acks, migrated FROM migrations WHERE object_id = ? and migration_complete = false";
+                        preparedStatement = connection.prepareStatement(fetchId);
+                        preparedStatement.setString(1, new String(command.getDirectoryNodeIP()));
+                        preparedStatement.setInt(2, command.getDirectoryNodePort());
+                        ResultSet rs = preparedStatement.executeQuery();
+                        int migrationAgentId = -1;
+                        boolean migrated = false;
+                        String migrationProgress = null;
+                        while (rs.next()) {
+                            migrationAgentId = rs.getInt(1);
+                        }
+                        preparedStatement = connection.prepareStatement(fetchMigration);
+                        preparedStatement.setString(1, new String(command.getObjectId()));
+                        rs = preparedStatement.executeQuery();
+                        while (rs.next()) {
+                            migrationProgress = rs.getString(1);
+                            if (rs.wasNull()) {
+                                migrationProgress = null;
+                            }
+                            migrated = rs.getBoolean(2);
+                        }
+                        System.out.println("Object Id: " + command.getObjectId());
+                        System.out.println("Migration Agent IP: " + command.getDirectoryNodeIP());
+                        System.out.println("Migration Agent Port: " + command.getDirectoryNodePort());
+                        System.out.println("Migration Agent ID: " + migrationAgentId);
+                        System.out.println("Migrated: " + migrated);
+                        System.out.println("Migration progress: " + migrationProgress);
+                        if (!migrated) {
+                            if ((migrationProgress != null &&
+                                (
+                                    !migrationProgress.contains("," + migrationAgentId + ",") ||
+                                    !migrationProgress.contains("," + migrationAgentId) ||
+                                    !migrationProgress.contains(migrationAgentId + ",") ||
+                                    (!migrationProgress.contains(",") && !migrationProgress.contains(String.valueOf(migrationAgentId)))
+                                ))
+                                ||
+                                migrationProgress == null
+                            ) {
+                                if (migrationProgress != null && migrationProgress.contains(",")) {
+                                    migrationProgress += "," + migrationAgentId;
+                                } else {
+                                    migrationProgress = String.valueOf(migrationAgentId);
+                                }
+                                logger.info("Migration Acks after update: " + migrationProgress);
+                                String sql = "UPDATE migrations SET migration_progress_acks = ? WHERE object_id = ?";
+                                preparedStatement = connection.prepareStatement(sql);
+                                preparedStatement.setString(1, migrationProgress);
+                                preparedStatement.setString(2, new String(command.getObjectId()));
+                                preparedStatement.executeUpdate();
+                            }
+                        }
+
+                        try {
+                            dataOutput.write("received migration agent update".getBytes());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            return null;
+                        }
+
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        try {
+                            connection.close();
+                        } catch (SQLException e1) {
+                            e1.printStackTrace();
+                        }
+                        return null;
+                    }
+                    break;
+                }
             }
-        }
 
-        try {
-            int id = 1;
-            String insertSql = "INSERT INTO configuration(latest_sequence_number, id) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM configuration WHERE id = ?)";
-            String updateSql = "UPDATE configuration SET latest_sequence_number = ? WHERE id = ?";
-            preparedStatement = connection.prepareStatement(updateSql);
-            preparedStatement.setInt(1, executeSeqNo);
-            preparedStatement.setInt(2, id);
-            preparedStatement.executeUpdate();
-            preparedStatement = connection.prepareStatement(insertSql);
-            preparedStatement.setInt(1, executeSeqNo);
-            preparedStatement.setInt(2, id);
-            preparedStatement.setInt(3, id);
-            preparedStatement.executeUpdate();
-            connection.commit();
+            try {
+                int id = 1;
+                String insertSql = "INSERT INTO configuration(latest_sequence_number, id) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM configuration WHERE id = ?)";
+                String updateSql = "UPDATE configuration SET latest_sequence_number = ? WHERE id = ?";
+                preparedStatement = connection.prepareStatement(updateSql);
+                preparedStatement.setInt(1, executeSeqNo);
+                preparedStatement.setInt(2, id);
+                preparedStatement.executeUpdate();
+                preparedStatement = connection.prepareStatement(insertSql);
+                preparedStatement.setInt(1, executeSeqNo);
+                preparedStatement.setInt(2, id);
+                preparedStatement.setInt(3, id);
+                preparedStatement.executeUpdate();
+                connection.commit();
 
-            lastExecutedSeq = executeSeqNo;
-            preparedStatement.close();
-            return byteArrayOutput.toByteArray();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
+                lastExecutedSeq = executeSeqNo;
+                preparedStatement.close();
+                return byteArrayOutput.toByteArray();
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return null;
+            }
+        } else {
+            System.out.println("Skipping request number: " + executeSeqNo + ", already completed. Current sequence number at: " + latestCompletedRequest);
+            return "request complete, skipped".getBytes();
         }
 
     }
