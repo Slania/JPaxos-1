@@ -5,6 +5,7 @@ import lsr.service.AbstractService;
 import lsr.service.SimplifiedService;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
+import sun.misc.IOUtils;
 
 import java.io.*;
 import java.net.Socket;
@@ -433,26 +434,58 @@ public class DirectoryService extends AbstractService {
     }
 
     protected byte[] makeSnapshot() {
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        ProcessBuilder processBuilder = new ProcessBuilder("backup_db.sh",
+                configuration.getProperty("db." + ProcessDescriptor.getInstance().localId + ".user"),
+                "localhost",
+                configuration.getProperty("db." + ProcessDescriptor.getInstance().localId + ".name"));
+        processBuilder.directory(new File("/home/min/a/rangars/JPaxos-1"));
+        Process process = null;
+        File sqlDumpFile = new File(configuration.getProperty("db." + ProcessDescriptor.getInstance().localId + ".name") + ".sql");
+        if (!sqlDumpFile.exists()) {
+            try {
+                sqlDumpFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        byte[] fileBytes = new byte[(int) sqlDumpFile.length()];
         try {
-            DataOutputStream dataOutputStream = new DataOutputStream(stream);
-            dataOutputStream.write(ProcessDescriptor.getInstance().localId);
+            process = processBuilder.start();
+            process.waitFor();
+            FileInputStream fis = new FileInputStream(sqlDumpFile + ".sql");
+            fis.read(fileBytes);
+            processBuilder = new ProcessBuilder("cleanup.sh", sqlDumpFile.getName());
+            process = processBuilder.start();
+            process.waitFor();
         } catch (IOException e) {
             e.printStackTrace();
-            return null;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        return stream.toByteArray();
+        return fileBytes;
     }
 
     @SuppressWarnings("unchecked")
     protected void updateToSnapshot(byte[] snapshot) {
-        ByteArrayInputStream stream = new ByteArrayInputStream(snapshot);
-        DataInputStream dataInputStream;
         try {
-            dataInputStream = new DataInputStream(stream);
-            int masterDB = dataInputStream.readInt();
-            restoreFromMaster(masterDB);
+            File file = new File("remoteDBSnapshot.sql");
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+            FileOutputStream fileOutputStream = new FileOutputStream("remoteSqlDump.sql", false);
+            fileOutputStream.write(snapshot);
+            ProcessBuilder processBuilder = new ProcessBuilder("restore_db.sh",
+                    configuration.getProperty("db." + ProcessDescriptor.getInstance().localId + ".user"),
+                    "localhost",
+                    configuration.getProperty("db." + ProcessDescriptor.getInstance().localId + ".name"),
+                    "remoteDBSnapshot.sql");
+            Process process = processBuilder.start();
+            process.waitFor();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
