@@ -49,12 +49,20 @@ public class ResultsInterpreter {
             ResultSet logs = preparedStatement.executeQuery();
             String replicaId;
             Long clientSendRequest, clientReceiveReply, nioClientProxyExecute, paxosEnqueueRequest, paxosDecide, serviceExecuteStart, serviceExecuteFinish, nioClientProxySent;
-            String clientSendRequest_s, clientReceiveReply_s, nioClientProxyExecute_s, paxosEnqueueRequest_s, paxosDecide_s, serviceExecuteStart_s, serviceExecuteFinish_s, nioClientProxySent_s;
+            String clientSendRequest_s, clientReceiveReply_s, nioClientProxyExecute_s, paxosEnqueueRequest_s, paxosDecide_s, serviceExecuteStart_s, serviceExecuteFinish_s, nioClientProxySent_s, request;
             while (logs.next()) {
+
                 replicaId = logs.getString("replica_id");
                 if (logs.wasNull()) {
                     replicaId = "unknown replica";
                 }
+                request = logs.getString("request");
+                if (logs.wasNull()) {
+                    request = "unknown request";
+                }
+
+                System.out.println("REQUEST: " + request);
+
                 clientSendRequest_s = logs.getString("client_send_request");
                 if (!logs.wasNull()) {
                     clientSendRequest = Long.valueOf(clientSendRequest_s);
@@ -119,6 +127,8 @@ public class ResultsInterpreter {
                 }
 
             }
+
+            System.out.println("-----------------------------------------------------------------------");
         }
 
     }
