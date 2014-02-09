@@ -49,41 +49,58 @@ public class ResultsInterpreter {
             ResultSet logs = preparedStatement.executeQuery();
             String replicaId;
             Integer clientSendRequest, clientReceiveReply, nioClientProxyExecute, paxosEnqueueRequest, paxosDecide, serviceExecuteStart, serviceExecuteFinish, nioClientProxySent;
+            String clientSendRequest_s, clientReceiveReply_s, nioClientProxyExecute_s, paxosEnqueueRequest_s, paxosDecide_s, serviceExecuteStart_s, serviceExecuteFinish_s, nioClientProxySent_s;
             while (logs.next()) {
                 replicaId = logs.getString("replica_id");
                 if (logs.wasNull()) {
                     replicaId = "unknown replica";
                 }
-                clientSendRequest = Integer.valueOf(logs.getString("client_send_request"));
-                if (logs.wasNull()) {
+                clientSendRequest_s = logs.getString("client_send_request");
+                if (!logs.wasNull()) {
+                    clientSendRequest = Integer.valueOf(clientSendRequest_s);
+                } else {
                     clientSendRequest = -1;
                 }
-                clientReceiveReply = Integer.valueOf(logs.getString("client_receive_reply"));
-                if (logs.wasNull()) {
+                clientReceiveReply_s = logs.getString("client_receive_reply");
+                if (!logs.wasNull()) {
+                    clientReceiveReply = Integer.valueOf(clientReceiveReply_s);
+                } else {
                     clientReceiveReply = -1;
                 }
-                nioClientProxyExecute = Integer.valueOf(logs.getString("nioclientproxy_execute"));
-                if (logs.wasNull()) {
+                nioClientProxyExecute_s = logs.getString("nioclientproxy_execute");
+                if (!logs.wasNull()) {
+                    nioClientProxyExecute = Integer.valueOf(nioClientProxyExecute_s);
+                } else {
                     nioClientProxyExecute = -1;
                 }
-                paxosEnqueueRequest = Integer.valueOf(logs.getString("paxos_enqueuerequest"));
-                if (logs.wasNull()) {
+                paxosEnqueueRequest_s = logs.getString("paxos_enqueuerequest");
+                if (!logs.wasNull()) {
+                    paxosEnqueueRequest = Integer.valueOf(paxosEnqueueRequest_s);
+                } else {
                     paxosEnqueueRequest = -1;
                 }
                 paxosDecide = Integer.valueOf(logs.getString("paxos_decide"));
-                if (logs.wasNull()) {
+                if (!logs.wasNull()) {
+                    paxosDecide = -1;
+                } else {
                     paxosDecide = -1;
                 }
-                serviceExecuteStart = Integer.valueOf(logs.getString("service_execute_start"));
-                if (logs.wasNull()) {
+                serviceExecuteStart_s = logs.getString("service_execute_start");
+                if (!logs.wasNull()) {
+                    serviceExecuteStart = Integer.valueOf(serviceExecuteStart_s);
+                } else {
                     serviceExecuteStart = -1;
                 }
-                serviceExecuteFinish = Integer.valueOf(logs.getString("service_execute_finish"));
+                serviceExecuteFinish_s = logs.getString("service_execute_finish");
                 if (logs.wasNull()) {
+                    serviceExecuteFinish = Integer.valueOf(serviceExecuteFinish_s);
+                } else {
                     serviceExecuteFinish = -1;
                 }
-                nioClientProxySent = Integer.valueOf(logs.getString("nioclientproxy_sent"));
-                if (logs.wasNull()) {
+                nioClientProxySent_s = logs.getString("nioclientproxy_sent");
+                if (!logs.wasNull()) {
+                    nioClientProxySent = Integer.valueOf(nioClientProxySent_s);
+                } else {
                     nioClientProxySent = -1;
                 }
 
