@@ -92,7 +92,7 @@ public class ResultsInterpreter {
                     serviceExecuteStart = (long) -1;
                 }
                 serviceExecuteFinish_s = logs.getString("service_execute_finish");
-                if (logs.wasNull()) {
+                if (!logs.wasNull()) {
                     serviceExecuteFinish = Long.valueOf(serviceExecuteFinish_s);
                 } else {
                     serviceExecuteFinish = (long) -1;
