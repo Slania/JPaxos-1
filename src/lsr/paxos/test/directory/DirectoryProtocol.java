@@ -220,7 +220,7 @@ public class DirectoryProtocol {
                                         ||
                                         migrationAcks == null
                                     ) {
-                                        if (migrationAcks != null && migrationAcks.contains(",")) {
+                                        if (migrationAcks != null) {
                                             migrationAcks += "," + directoryId;
                                         } else {
                                             migrationAcks = String.valueOf(directoryId);

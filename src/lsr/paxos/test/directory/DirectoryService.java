@@ -353,7 +353,7 @@ public class DirectoryService extends AbstractService {
                                 ||
                                 migrationProgress == null
                             ) {
-                                if (migrationProgress != null && migrationProgress.contains(",")) {
+                                if (migrationProgress != null) {
                                     migrationProgress += "," + migrationAgentId;
                                 } else {
                                     migrationProgress = String.valueOf(migrationAgentId);
