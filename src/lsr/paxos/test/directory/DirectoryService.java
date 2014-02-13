@@ -59,10 +59,9 @@ public class DirectoryService extends AbstractService {
         try {
             preparedStatement = connection.prepareStatement(lastExecutedRequestSql);
             ResultSet resultSet = preparedStatement.executeQuery();
-            resultSet.next();
-            latestCompletedRequest = resultSet.getInt(1);
-            if (resultSet.wasNull()) {
-                latestCompletedRequest = -1;
+            while (resultSet.next()) {
+                latestCompletedRequest = resultSet.getInt(1);
+                break;
             }
         } catch (SQLException e) {
             e.printStackTrace();
