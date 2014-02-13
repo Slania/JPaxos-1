@@ -138,7 +138,7 @@ public class MigrationAgent {
                             }
                             System.out.println("********-------------------------------********");
                             /* wait random time to simulate migration of object */
-                            Thread.sleep((long) (Math.random() * 10000));
+                            Thread.sleep((long) 5000);
                         }
                         DirectoryServiceCommand ackCommand = new DirectoryServiceCommand(hostAddress.getBytes(), port, DirectoryServiceCommand.DirectoryCommandType.MIGRATION_AGENT_ACK, new String(objectId));
                         response = client.execute(ackCommand.toByteArray());
