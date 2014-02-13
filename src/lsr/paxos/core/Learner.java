@@ -68,10 +68,12 @@ class Learner {
                 }
             }
         } else {
-            ClientRequest[] requests = UnBatcher.unpackCR(instance.getValue());
-            for (ClientRequest request : requests) {
-                synchronized (ReplicaRequestTimelines.lock) {
-                    ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Learner_OnAccept, System.currentTimeMillis()));
+            if (!(instance.getValue() == null)) {
+                ClientRequest[] requests = UnBatcher.unpackCR(instance.getValue());
+                for (ClientRequest request : requests) {
+                    synchronized (ReplicaRequestTimelines.lock) {
+                        ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Learner_OnAccept, System.currentTimeMillis()));
+                    }
                 }
             }
         }
