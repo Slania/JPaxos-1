@@ -27,8 +27,8 @@ public class ReplicaRequestTimelines implements Runnable{
     String clientbatchmanager_onforwardclientbatch_sql = "update instrumentation set clientbatchmanager_onforwardclientbatch = ? where request_id = ? and replica_id = ?";
     String paxos_enqueuerequest_sql = "update instrumentation set paxos_enqueuerequest = ? where request_id = ? and replica_id = ?";
     String proposerimpl_propose_sql = "update instrumentation set proposerimpl_propose = ? where request_id = ? and replica_id = ?";
-    String learner_oncccept_sql = "update instrumentation set learner_oncccept = ? where request_id = ? and replica_id = ?";
-    String acceptor_onpropose_sql = "update instrumentation set acceptor_onpropose = ? || \',\' || coalesce(acceptor_onpropose, '') where request_id = ? and replica_id = ?";
+    String learner_oncccept_sql = "update instrumentation set learner_oncccept = ? || \',\' || coalesce(learner_oncccept, '') where request_id = ? and replica_id = ?";
+    String acceptor_onpropose_sql = "update instrumentation set acceptor_onpropose = ? where request_id = ? and replica_id = ?";
     String paxos_decide_sql = "update instrumentation set paxos_decide = ? where request_id = ? and replica_id = ?";
     String decidedcallbackimpl_onrequestordered_sql = "update instrumentation set decidedcallbackimpl_onrequestordered = ? where request_id = ? and replica_id = ?";
     String decidedcallbackimpl_executerequests_sql = "update instrumentation set decidedcallbackimpl_executerequests = ? where request_id = ? and replica_id = ?";
