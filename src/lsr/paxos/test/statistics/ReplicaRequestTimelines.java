@@ -145,7 +145,11 @@ public class ReplicaRequestTimelines implements Runnable{
                     System.out.println("Instrumentation logging error: No matching flowpoint found");
                     return;
                 }
-                preparedStatement.setString(1, String.valueOf(flowPoint.getTimestamp()));
+                if (flowPoint.getReplicaId() != -1) {
+                    preparedStatement.setString(1, String.valueOf(flowPoint.getTimestamp()) + String.valueOf(flowPoint.getReplicaId()));
+                } else {
+                    preparedStatement.setString(1, String.valueOf(flowPoint.getTimestamp()));
+                }
                 preparedStatement.setString(2, requestId.toString());
                 preparedStatement.setString(3, replicaId);
 

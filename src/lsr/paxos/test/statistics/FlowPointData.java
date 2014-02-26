@@ -13,10 +13,17 @@ public class FlowPointData {
 
     private FlowPoint flowPoint;
     private Long timestamp;
+    private int replicaId = -1;
 
     public FlowPointData(FlowPoint flowPoint, Long timestamp) {
         this.flowPoint = flowPoint;
         this.timestamp = timestamp;
+    }
+
+    public FlowPointData(FlowPoint flowPoint, Long timestamp, int replicaId) {
+        this.flowPoint = flowPoint;
+        this.timestamp = timestamp;
+        this.replicaId = replicaId;
     }
 
     public FlowPoint getFlowPoint() {
@@ -33,6 +40,14 @@ public class FlowPointData {
 
     public void setTimestamp(Long timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public int getReplicaId() {
+        return replicaId;
+    }
+
+    public void setReplicaId(int replicaId) {
+        this.replicaId = replicaId;
     }
 
     @Override

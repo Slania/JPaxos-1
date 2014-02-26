@@ -63,7 +63,7 @@ class Learner {
                 ClientRequest[] requests = ClientBatchStore.instance.getBatch(clientBatchId);
                 for (ClientRequest request : requests) {
                     synchronized (ReplicaRequestTimelines.lock) {
-                        ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Learner_OnAccept, System.currentTimeMillis()));
+                        ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Learner_OnAccept, System.currentTimeMillis(), sender));
                     }
                 }
             }
@@ -72,7 +72,7 @@ class Learner {
                 ClientRequest[] requests = UnBatcher.unpackCR(instance.getValue());
                 for (ClientRequest request : requests) {
                     synchronized (ReplicaRequestTimelines.lock) {
-                        ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Learner_OnAccept, System.currentTimeMillis()));
+                        ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Learner_OnAccept, System.currentTimeMillis(), sender));
                     }
                 }
             }
