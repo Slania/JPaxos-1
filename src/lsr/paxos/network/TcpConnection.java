@@ -2,12 +2,7 @@ package lsr.paxos.network;
 
 import static lsr.common.ProcessDescriptor.processDescriptor;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -21,6 +16,7 @@ import lsr.common.PID;
 import lsr.paxos.messages.Message;
 import lsr.paxos.messages.MessageFactory;
 
+import lsr.paxos.test.statistics.MessageData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -135,6 +131,7 @@ public class TcpConnection {
                             output.write(msg);
                             output.flush();
                             writing = false;
+                            MessageData messageData = new MessageData(msg);
                         } catch (IOException e) {
                             logger.warn("Error sending message", e);
                             writing = false;
@@ -238,6 +235,7 @@ public class TcpConnection {
                     logger.warn("TCP msg queue overfolw: Discarding a message to send anoter");
                 }
             }
+            MessageData messageData = new MessageData(message);
         } else {
             // keep last n messages
             while (!sendQueue.offer(message)) {
