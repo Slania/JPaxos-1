@@ -11,7 +11,7 @@ import java.io.InputStream;
 public class MessageData {
 
     public enum QueuePoint {
-        SendQueue, ReceiveQueue
+        Sent, Queued
     }
 
     private Message message;

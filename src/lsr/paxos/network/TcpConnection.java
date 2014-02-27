@@ -17,6 +17,7 @@ import lsr.paxos.messages.Message;
 import lsr.paxos.messages.MessageFactory;
 
 import lsr.paxos.test.statistics.MessageData;
+import lsr.paxos.test.statistics.MessageTimelines;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -131,7 +132,9 @@ public class TcpConnection {
                             output.write(msg);
                             output.flush();
                             writing = false;
-                            MessageData messageData = new MessageData(msg);
+                            MessageData messageData = new MessageData(msg, System.currentTimeMillis(), MessageData.QueuePoint.Sent);
+                            MessageTimelines.addMessagePoint(messageData);
+                            MessageTimelines.sentMessages.add(messageData.getMessage().toString());
                         } catch (IOException e) {
                             logger.warn("Error sending message", e);
                             writing = false;
@@ -235,7 +238,8 @@ public class TcpConnection {
                     logger.warn("TCP msg queue overfolw: Discarding a message to send anoter");
                 }
             }
-            MessageData messageData = new MessageData(message);
+            MessageData messageData = new MessageData(message, System.currentTimeMillis(), MessageData.QueuePoint.Queued);
+            MessageTimelines.addMessagePoint(messageData);
         } else {
             // keep last n messages
             while (!sendQueue.offer(message)) {
