@@ -25,11 +25,20 @@ public class MessageTimelines implements Runnable {
     }
 
     public void logMessagePoints() {
+        Long queuedTime = (long) 0;
+        Long sentTime = (long) 0;
         for (String sentMessage : sentMessages) {
             List<MessageData> messageData = allMessageData.get(sentMessage);
             for (MessageData data : messageData) {
                 logger.info(data.getMessage() + " - " + data.getQueuePoint().toString() + " at: " + data.getTimestamp());
+                if (data.getQueuePoint().equals(MessageData.QueuePoint.Queued)) {
+                    queuedTime = data.getTimestamp();
+                }
+                if (data.getQueuePoint().equals(MessageData.QueuePoint.Sent)) {
+                    sentTime = data.getTimestamp();
+                }
             }
+            logger.info(messageData.get(0).getMessage() + " - total time: " + (sentTime - queuedTime));
         }
     }
 
