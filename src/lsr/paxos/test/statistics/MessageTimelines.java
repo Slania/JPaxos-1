@@ -38,8 +38,10 @@ public class MessageTimelines implements Runnable {
                 if (data.getQueuePoint().equals(MessageData.QueuePoint.Sent)) {
                     sentTime = data.getTimestamp();
                 }
+                if (queuedTime != 0 && sentTime != 0) {
+                    logger.info(messageData.get(0).getMessage() + " - total time: " + (sentTime - queuedTime));
+                }
             }
-            logger.info(messageData.get(0).getMessage() + " - total time: " + (sentTime - queuedTime));
             logger.info("*************************************************************");
         }
     }
