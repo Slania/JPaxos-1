@@ -132,6 +132,7 @@ public class TcpConnection {
                             output.write(msg);
                             output.flush();
                             writing = false;
+                            logger.info(new String(msg));
                             MessageData messageData = new MessageData(msg, System.currentTimeMillis(), MessageData.QueuePoint.Sent);
                             MessageTimelines.addMessagePoint(messageData);
                             MessageTimelines.sentMessages.add(messageData.getMessage().toString());
