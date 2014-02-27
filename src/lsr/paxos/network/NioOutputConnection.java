@@ -14,6 +14,8 @@ import java.util.concurrent.BlockingQueue;
 
 import lsr.common.PID;
 
+import lsr.paxos.messages.Accept;
+import lsr.paxos.messages.Propose;
 import lsr.paxos.test.statistics.MessageData;
 import lsr.paxos.test.statistics.MessageTimelines;
 import org.slf4j.Logger;
@@ -65,7 +67,10 @@ public class NioOutputConnection extends NioConnection {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-//        MessageData messageData = new MessageData(data, System.currentTimeMillis(), MessageData.QueuePoint.Queued);
+        MessageData messageData = new MessageData(data, System.currentTimeMillis(), MessageData.QueuePoint.Queued);
+        if (messageData.getMessage() instanceof Accept || messageData.getMessage() instanceof Propose) {
+            logger.info(messageData.getMessage().toString());
+        }
 //        MessageTimelines.addMessagePoint(messageData);
         return true;
     }
@@ -203,7 +208,7 @@ public class NioOutputConnection extends NioConnection {
 
     private void write(SelectionKey key) throws IOException {
         int count = channel.write(outputBuffer);
-//        logger.info(outputBuffer.toString());
+        logger.info(outputBuffer.toString());
 //        MessageData messageData = new MessageData(outputBuffer.array(), System.currentTimeMillis(), MessageData.QueuePoint.Sent);
 //        MessageTimelines.addMessagePoint(messageData);
 //        MessageTimelines.sentMessages.add(messageData.getMessage().toString());
