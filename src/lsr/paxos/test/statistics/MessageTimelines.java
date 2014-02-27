@@ -13,7 +13,7 @@ public class MessageTimelines implements Runnable {
     static final Logger logger = Logger.getLogger(MessageTimelines.class.getCanonicalName());
 
     public static HashMap<String, List<MessageData>> allMessageData = new HashMap<String, List<MessageData>>();
-    public static List<String> sentMessages;
+    public static List<String> sentMessages = new ArrayList<String>();
 
     public static void addMessagePoint(MessageData data) {
         List<MessageData> messageData = allMessageData.get(data.getMessage().toString());
@@ -45,7 +45,7 @@ public class MessageTimelines implements Runnable {
     @Override
     public void run() {
         while (true) {
-            if ((System.currentTimeMillis() % 10) == 0) {
+            if ((System.currentTimeMillis() % 1000) == 0) {
                 logMessagePoints();
             }
         }
