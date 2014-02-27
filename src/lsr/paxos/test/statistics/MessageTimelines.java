@@ -48,7 +48,7 @@ public class MessageTimelines implements Runnable {
     public void run() {
         logger.info("******* Message Timelines started *******");
         while (true) {
-            if ((System.currentTimeMillis() % 1000) == 0) {
+            if ((System.currentTimeMillis() % 10) == 0) {
                 logMessagePoints();
             }
         }
