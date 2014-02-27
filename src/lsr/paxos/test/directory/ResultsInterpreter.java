@@ -112,18 +112,19 @@ public class ResultsInterpreter {
                     nioClientProxySent = (long) -1;
                 }
 
-                System.out.println("Machine: " + replicaId);
-                if (clientSendRequest != -1 && clientReceiveReply != -1) {
-                    System.out.println("Full client side round trip: " + (clientReceiveReply - clientSendRequest));
-                }
-                if (nioClientProxyExecute != -1 && nioClientProxySent != -1) {
-                    System.out.println("Full server side round trip: " + (clientReceiveReply - clientSendRequest));
-                }
-                if (paxosEnqueueRequest != -1 && paxosDecide != -1) {
-                    System.out.println("Paxos end to end: " + (paxosDecide - paxosEnqueueRequest));
-                }
+//                System.out.println("Machine: " + replicaId);
+//                if (clientSendRequest != -1 && clientReceiveReply != -1) {
+//                    System.out.println("Full client side round trip: " + (clientReceiveReply - clientSendRequest));
+//                }
+//                if (nioClientProxyExecute != -1 && nioClientProxySent != -1) {
+//                    System.out.println("Full server side round trip: " + (clientReceiveReply - clientSendRequest));
+//                }
+//                if (paxosEnqueueRequest != -1 && paxosDecide != -1) {
+//                    System.out.println("Paxos end to end: " + (paxosDecide - paxosEnqueueRequest));
+//                }
                 if (serviceExecuteStart != -1 && serviceExecuteFinish != -1) {
-                    System.out.println("Service time: " + (serviceExecuteFinish - serviceExecuteStart));
+//                    System.out.println("Service time: " + (serviceExecuteFinish - serviceExecuteStart));
+                    System.out.println(serviceExecuteFinish - serviceExecuteStart);
                 }
 
             }
