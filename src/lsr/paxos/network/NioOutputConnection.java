@@ -65,8 +65,8 @@ public class NioOutputConnection extends NioConnection {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        MessageData messageData = new MessageData(data, System.currentTimeMillis(), MessageData.QueuePoint.Queued);
-        MessageTimelines.addMessagePoint(messageData);
+//        MessageData messageData = new MessageData(data, System.currentTimeMillis(), MessageData.QueuePoint.Queued);
+//        MessageTimelines.addMessagePoint(messageData);
         return true;
     }
 
@@ -203,10 +203,10 @@ public class NioOutputConnection extends NioConnection {
 
     private void write(SelectionKey key) throws IOException {
         int count = channel.write(outputBuffer);
-        logger.info(outputBuffer.toString());
-        MessageData messageData = new MessageData(outputBuffer.array(), System.currentTimeMillis(), MessageData.QueuePoint.Sent);
-        MessageTimelines.addMessagePoint(messageData);
-        MessageTimelines.sentMessages.add(messageData.getMessage().toString());
+//        logger.info(outputBuffer.toString());
+//        MessageData messageData = new MessageData(outputBuffer.array(), System.currentTimeMillis(), MessageData.QueuePoint.Sent);
+//        MessageTimelines.addMessagePoint(messageData);
+//        MessageTimelines.sentMessages.add(messageData.getMessage().toString());
 
         logger.trace("writing to: {} ( bytes)", replicaId, count);
     }
