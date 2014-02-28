@@ -61,7 +61,7 @@ public class ResultsInterpreter {
                     request = "unknown request";
                 }
 
-                System.out.println("REQUEST: " + request);
+//                System.out.println("REQUEST: " + request);
 
                 clientSendRequest_s = logs.getString("client_send_request");
                 if (!logs.wasNull()) {
@@ -129,7 +129,7 @@ public class ResultsInterpreter {
 
             }
 
-            System.out.println("-----------------------------------------------------------------------");
+//            System.out.println("-----------------------------------------------------------------------");
         }
 
     }
