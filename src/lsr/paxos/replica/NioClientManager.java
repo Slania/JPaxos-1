@@ -91,7 +91,7 @@ public class NioClientManager implements AcceptHandler {
         Thread requestTimeline = new Thread(new ReplicaRequestTimelines());
         Thread messageTimeline = new Thread(new MessageTimelines());
         requestTimeline.start();
-        messageTimeline.start();
+//        messageTimeline.start();
 
     }
 
