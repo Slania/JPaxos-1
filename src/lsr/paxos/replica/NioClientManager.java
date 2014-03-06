@@ -122,7 +122,7 @@ public class NioClientManager implements AcceptHandler {
             ReaderAndWriter raw = new ReaderAndWriter(socketChannel, selectorThread);
             new NioClientProxy(raw, requestManager);
             if (logger.isDebugEnabled()) {
-                logger.debug("Connection from {}", socketChannel.socket().getInetAddress());
+                logger.info("Connection from {} at {}", socketChannel.socket().getInetAddress(), System.currentTimeMillis());
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to set tcpNoDelay somewhere below. Let's die.",
