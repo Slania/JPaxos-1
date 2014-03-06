@@ -121,7 +121,9 @@ public class NioClientManager implements AcceptHandler {
             SelectorThread selectorThread = getNextThread();
             ReaderAndWriter raw = new ReaderAndWriter(socketChannel, selectorThread);
             new NioClientProxy(raw, requestManager);
+            logger.info("+++++++++++++++++++++++++++++++++++++++++++++++");
             logger.info("Connection from {} at {}", socketChannel.socket().getInetAddress(), System.currentTimeMillis());
+            logger.info("+++++++++++++++++++++++++++++++++++++++++++++++");
             if (logger.isDebugEnabled()) {
                 logger.info("Connection from {} at {}", socketChannel.socket().getInetAddress(), System.currentTimeMillis());
             }
