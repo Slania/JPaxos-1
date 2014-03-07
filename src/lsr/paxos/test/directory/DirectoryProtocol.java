@@ -43,7 +43,7 @@ public class DirectoryProtocol {
     private boolean isLeader = false;
     private Client client;
 
-    public void start(int localId) throws IOException {
+    public void start(int localId) throws IOException, InterruptedException {
         logger.info("***** opening properties file ****");
         FileInputStream fis = new FileInputStream("paxos.properties");
         configuration.load(fis);
@@ -232,6 +232,7 @@ public class DirectoryProtocol {
                                         if (ByteBuffer.wrap(response).getInt() == 1) {
                                             logger.info("*******Paxos updated*******");
                                         }
+                                        Thread.sleep(100);
                                     }
                                 }
                             }
