@@ -232,7 +232,7 @@ public class DirectoryProtocol {
                                         if (ByteBuffer.wrap(response).getInt() == 1) {
                                             logger.info("*******Paxos updated*******");
                                         }
-                                        Thread.sleep(100);
+                                        Thread.sleep(1000);
                                     }
                                 }
                             }
