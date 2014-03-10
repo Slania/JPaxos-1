@@ -96,6 +96,22 @@ public class NioClientProxy implements ClientProxy {
      */
     private void execute(ByteBuffer buffer) throws InterruptedException {
         ClientCommand command = new ClientCommand(buffer);
+        File file = new File("command_packet_handler_times_" + ProcessDescriptor.getInstance().localId + ".txt");
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
+            BufferedWriter bw = new BufferedWriter(fw);
+            bw.write("In execute: " + String.valueOf(System.currentTimeMillis()) + "\n");
+            bw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         synchronized (ReplicaRequestTimelines.lock) {
             ReplicaRequestTimelines.addFlowPoint(command.getRequest().getRequestId(), new FlowPointData(FlowPointData.FlowPoint.NioClientProxy_Execute, System.currentTimeMillis()));
         }
