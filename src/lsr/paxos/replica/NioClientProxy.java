@@ -112,9 +112,9 @@ public class NioClientProxy implements ClientProxy {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        synchronized (ReplicaRequestTimelines.lock) {
+//        synchronized (ReplicaRequestTimelines.lock) {
             ReplicaRequestTimelines.addFlowPoint(command.getRequest().getRequestId(), new FlowPointData(FlowPointData.FlowPoint.NioClientProxy_Execute, System.currentTimeMillis()));
-        }
+//        }
         requestManager.onClientRequest(command, this);
         try {
             FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
