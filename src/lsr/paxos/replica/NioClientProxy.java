@@ -2,6 +2,9 @@ package lsr.paxos.replica;
 
 import static lsr.common.ProcessDescriptor.processDescriptor;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -183,6 +186,22 @@ public class NioClientProxy implements ClientProxy {
         public void finished() throws InterruptedException {
 
             if (header) {
+                File file = new File("command_packet_handler_times.txt");
+                if (!file.exists()) {
+                    try {
+                        file.createNewFile();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                try {
+                    FileWriter fw = new FileWriter(file.getAbsoluteFile());
+                    BufferedWriter bw = new BufferedWriter(fw);
+                    bw.write(String.valueOf(System.currentTimeMillis()));
+                    bw.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 assert currentBuffer == readBuffer : "Default buffer should be used for reading header";
 
                 readBuffer.position(ClientCommand.HEADER_VALUE_SIZE_OFFSET);
