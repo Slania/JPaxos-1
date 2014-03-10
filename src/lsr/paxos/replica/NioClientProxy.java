@@ -11,6 +11,7 @@ import java.util.Arrays;
 
 import lsr.common.ClientCommand;
 import lsr.common.ClientReply;
+import lsr.common.ProcessDescriptor;
 import lsr.common.nio.PacketHandler;
 import lsr.common.nio.ReaderAndWriter;
 import lsr.common.nio.SelectorThread;
@@ -186,7 +187,7 @@ public class NioClientProxy implements ClientProxy {
         public void finished() throws InterruptedException {
 
             if (header) {
-                File file = new File("command_packet_handler_times.txt");
+                File file = new File("command_packet_handler_times_" + ProcessDescriptor.getInstance().localId + ".txt");
                 if (!file.exists()) {
                     try {
                         file.createNewFile();
@@ -195,7 +196,7 @@ public class NioClientProxy implements ClientProxy {
                     }
                 }
                 try {
-                    FileWriter fw = new FileWriter(file.getAbsoluteFile());
+                    FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
                     BufferedWriter bw = new BufferedWriter(fw);
                     bw.write(String.valueOf(System.currentTimeMillis()));
                     bw.close();
