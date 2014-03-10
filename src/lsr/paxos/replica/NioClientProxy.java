@@ -198,7 +198,7 @@ public class NioClientProxy implements ClientProxy {
                 try {
                     FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
                     BufferedWriter bw = new BufferedWriter(fw);
-                    bw.write(String.valueOf(System.currentTimeMillis()));
+                    bw.write("Header Stripping: " + String.valueOf(System.currentTimeMillis()) + "\n");
                     bw.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -216,6 +216,22 @@ public class NioClientProxy implements ClientProxy {
                 }
             } else {
                 currentBuffer.flip();
+                File file = new File("command_packet_handler_times_" + ProcessDescriptor.getInstance().localId + ".txt");
+                if (!file.exists()) {
+                    try {
+                        file.createNewFile();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                try {
+                    FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
+                    BufferedWriter bw = new BufferedWriter(fw);
+                    bw.write("Flipping buffer before execute: " + String.valueOf(System.currentTimeMillis()) + "\n");
+                    bw.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 execute(currentBuffer);
                 // for reading header we can use default buffer
                 currentBuffer = readBuffer;

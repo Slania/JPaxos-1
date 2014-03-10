@@ -219,11 +219,11 @@ public class Client {
         while (true) {
             try {
                 logger.debug("Sending {}", request.getRequestId());
-                output.write(requestBA);
-                output.flush();
                 synchronized (ReplicaRequestTimelines.lock) {
                     ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Client_Send_Request, System.currentTimeMillis()));
                 }
+                output.write(requestBA);
+                output.flush();
 
                 // Blocks only for socket timeout
                 ClientReply clientReply = new ClientReply(input);
