@@ -92,10 +92,10 @@ public class NioClientProxy implements ClientProxy {
      */
     private void execute(ByteBuffer buffer) throws InterruptedException {
         ClientCommand command = new ClientCommand(buffer);
-        requestManager.onClientRequest(command, this);
         synchronized (ReplicaRequestTimelines.lock) {
             ReplicaRequestTimelines.addFlowPoint(command.getRequest().getRequestId(), new FlowPointData(FlowPointData.FlowPoint.NioClientProxy_Execute, System.currentTimeMillis()));
         }
+        requestManager.onClientRequest(command, this);
     }
 
     /**
