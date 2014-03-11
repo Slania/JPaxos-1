@@ -198,8 +198,8 @@ public class ReplicaRequestTimelines implements Runnable {
         logger.info("******* Replica Request Timelines started *******");
         /* Old implementation */
 
-//        Connection connection = null;
-//        PreparedStatement preparedStatement = null;
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
 //
         logger.info("***** opening properties file ****");
         FileInputStream fis = null;
@@ -210,9 +210,9 @@ public class ReplicaRequestTimelines implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        String url = "jdbc:postgresql://" + configuration.getProperty("db.instrumentation");
-//        String user = "postgres";
-//        String password = "password";
+        String url = "jdbc:postgresql://" + configuration.getProperty("db.instrumentation");
+        String user = "postgres";
+        String password = "password";
 //        String replicaId = "";
 //        if (ProcessDescriptor.getInstance() != null) {
 //            replicaId = String.valueOf(ProcessDescriptor.getInstance().localId);
@@ -220,8 +220,8 @@ public class ReplicaRequestTimelines implements Runnable {
 //            replicaId = "client";
 //        }
 //
-//        try {
-//            connection = DriverManager.getConnection(url, user, password);
+        try {
+            connection = DriverManager.getConnection(url, user, password);
 
 //            while (true) {
 //                synchronized (ReplicaRequestTimelines.lock) {
@@ -245,26 +245,25 @@ public class ReplicaRequestTimelines implements Runnable {
 //            }
 
         /* * */
-        while (true) {
-            LogPoint nextFlowPoint = flowPointDatas.poll();
-            if (nextFlowPoint != null) {
-                logFLowPoints(nextFlowPoint);
+            while (true) {
+                LogPoint nextFlowPoint = flowPointDatas.poll();
+                if (nextFlowPoint != null) {
+                    logFLowPoints(nextFlowPoint, connection);
+                }
+                RequestIdNameMap nextRequest = requestIdNameMaps.poll();
+                if (nextRequest != null) {
+                    logRequest(nextRequest, connection);
+                }
             }
-            RequestIdNameMap nextRequest = requestIdNameMaps.poll();
-            if (nextRequest != null) {
-                logRequest(nextRequest);
-            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
-    private void logRequest(RequestIdNameMap nextRequest) {
-        Connection connection = null;
+    private void logRequest(RequestIdNameMap nextRequest, Connection connection) {
         PreparedStatement preparedStatement = null;
 
 
-        String url = "jdbc:postgresql://" + configuration.getProperty("db.instrumentation");
-        String user = "postgres";
-        String password = "password";
         String replicaId = "";
         if (ProcessDescriptor.getInstance() != null) {
             replicaId = String.valueOf(ProcessDescriptor.getInstance().localId);
@@ -274,7 +273,6 @@ public class ReplicaRequestTimelines implements Runnable {
 
         String existenceSql = "select 1 from instrumentation where replica_id = ? and request_id = ?";
         try {
-            connection = DriverManager.getConnection(url, user, password);
             preparedStatement = connection.prepareStatement(existenceSql);
             preparedStatement.setString(1, replicaId);
             preparedStatement.setString(2, nextRequest.getRequestId().toString());
@@ -304,14 +302,10 @@ public class ReplicaRequestTimelines implements Runnable {
         }
     }
 
-    private void logFLowPoints(LogPoint nextEntry) {
-        Connection connection = null;
+    private void logFLowPoints(LogPoint nextEntry, Connection connection) {
         PreparedStatement preparedStatement = null;
 
 
-        String url = "jdbc:postgresql://" + configuration.getProperty("db.instrumentation");
-        String user = "postgres";
-        String password = "password";
         String replicaId = "";
         if (ProcessDescriptor.getInstance() != null) {
             replicaId = String.valueOf(ProcessDescriptor.getInstance().localId);
@@ -322,7 +316,6 @@ public class ReplicaRequestTimelines implements Runnable {
         String existenceSql = "select 1 from instrumentation where replica_id = ? and request_id = ?";
 
         try {
-            connection = DriverManager.getConnection(url, user, password);
             preparedStatement = connection.prepareStatement(existenceSql);
             preparedStatement.setString(1, replicaId);
             preparedStatement.setString(2, nextEntry.getRequestId().toString());
