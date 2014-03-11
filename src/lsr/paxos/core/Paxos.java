@@ -219,14 +219,14 @@ public class Paxos implements FailureDetector.FailureDetectorListener {
         if (request instanceof ClientBatchID) {
             ClientRequest[] requests = ClientBatchStore.instance.getBatch((ClientBatchID) request);
             for (ClientRequest clientRequest : requests) {
-                synchronized (ReplicaRequestTimelines.lock) {
+//                synchronized (ReplicaRequestTimelines.lock) {
                     ReplicaRequestTimelines.addFlowPoint(clientRequest.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Paxos_EnqueueRequest, System.currentTimeMillis()));
-                }
+//                }
             }
         } else {
-            synchronized (ReplicaRequestTimelines.lock) {
+//            synchronized (ReplicaRequestTimelines.lock) {
                 ReplicaRequestTimelines.addFlowPoint(((ClientRequest) request).getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Paxos_EnqueueRequest, System.currentTimeMillis()));
-            }
+//            }
         }
         batcher.enqueueClientRequest(request);
     }
@@ -294,17 +294,17 @@ public class Paxos implements FailureDetector.FailureDetectorListener {
             for (ClientBatchID clientBatchId : clientBatchIds) {
                 ClientRequest[] requests = ClientBatchStore.instance.getBatch(clientBatchId);
                 for (ClientRequest request : requests) {
-                    synchronized (ReplicaRequestTimelines.lock) {
+//                    synchronized (ReplicaRequestTimelines.lock) {
                         ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Paxos_Decide, System.currentTimeMillis()));
-                    }
+//                    }
                 }
             }
         } else {
             ClientRequest[] requests = UnBatcher.unpackCR(ci.getValue());
             for (ClientRequest request : requests) {
-                synchronized (ReplicaRequestTimelines.lock) {
+//                synchronized (ReplicaRequestTimelines.lock) {
                     ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Paxos_Decide, System.currentTimeMillis()));
-                }
+//                }
             }
         }
 

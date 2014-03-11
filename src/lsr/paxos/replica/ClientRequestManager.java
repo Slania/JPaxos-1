@@ -278,15 +278,15 @@ final public class ClientRequestManager {
                         "Scheduling sending reply: {} {}", request.getRequestId(), clientReply);
             }
 
-            synchronized (ReplicaRequestTimelines.lock) {
+//            synchronized (ReplicaRequestTimelines.lock) {
                 ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.ClientRequestManager_OnRequestExecuted, System.currentTimeMillis()));
-            }
+//            }
 
             client.send(clientReply);
 
-            synchronized (ReplicaRequestTimelines.lock) {
+//            synchronized (ReplicaRequestTimelines.lock) {
                 ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.NioClientProxy_Sent, System.currentTimeMillis()));
-            }
+//            }
         }
     }
 

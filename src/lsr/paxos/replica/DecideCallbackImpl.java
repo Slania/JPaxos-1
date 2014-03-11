@@ -68,17 +68,17 @@ public class DecideCallbackImpl implements DecideCallback {
             for (ClientBatchID clientBatchId : clientBatchIds) {
                 ClientRequest[] clientRequests = ClientBatchStore.instance.getBatch(clientBatchId);
                 for (ClientRequest clientRequest : clientRequests) {
-                    synchronized (ReplicaRequestTimelines.lock) {
+//                    synchronized (ReplicaRequestTimelines.lock) {
                         ReplicaRequestTimelines.addFlowPoint(clientRequest.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.DecidedCallbackImpl_onRequestOrdered, System.currentTimeMillis()));
-                    }
+//                    }
                 }
             }
         } else {
             ClientRequest[] clientRequests = UnBatcher.unpackCR(ci.getValue());
             for (ClientRequest clientRequest : clientRequests) {
-                synchronized (ReplicaRequestTimelines.lock) {
+//                synchronized (ReplicaRequestTimelines.lock) {
                     ReplicaRequestTimelines.addFlowPoint(clientRequest.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.DecidedCallbackImpl_onRequestOrdered, System.currentTimeMillis()));
-                }
+//                }
             }
         }
 
@@ -137,9 +137,9 @@ public class DecideCallbackImpl implements DecideCallback {
                         replica.executeClientBatchAndWait(executeUB, requestsFragment);
                         requestsList.addAll(Arrays.asList(requestsFragment));
                         for (ClientRequest clientRequest : requestsList) {
-                            synchronized (ReplicaRequestTimelines.lock) {
+//                            synchronized (ReplicaRequestTimelines.lock) {
                                 ReplicaRequestTimelines.addFlowPoint(clientRequest.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.DecidedCallbackImpl_ExecuteRequests, System.currentTimeMillis()));
-                            }
+//                            }
                         }
                     }
                     requests = (ClientRequest[]) requestsList.toArray();
@@ -148,9 +148,9 @@ public class DecideCallbackImpl implements DecideCallback {
             } else {
                 requests = UnBatcher.unpackCR(ci.getValue());
                 for (ClientRequest request : requests) {
-                    synchronized (ReplicaRequestTimelines.lock) {
+//                    synchronized (ReplicaRequestTimelines.lock) {
                         ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.DecidedCallbackImpl_ExecuteRequests, System.currentTimeMillis()));
-                    }
+//                    }
                 }
                 if (logger.isDebugEnabled(processDescriptor.logMark_OldBenchmark)) {
                     logger.info(processDescriptor.logMark_OldBenchmark,
@@ -166,11 +166,13 @@ public class DecideCallbackImpl implements DecideCallback {
 
             // Done with all the client batches in this instance
             replica.instanceExecuted(executeUB, requests);
+            /* Old implementation
             for (ClientRequest clientRequest : requests) {
                 synchronized (ReplicaRequestTimelines.lock) {
                     ReplicaRequestTimelines.finishedRequestIds.add(clientRequest.getRequestId());
                 }
             }
+            */
             synchronized (decidedWaitingExecution) {
                 decidedWaitingExecution.remove(executeUB);
             }

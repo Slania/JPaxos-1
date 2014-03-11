@@ -130,9 +130,9 @@ final public class ClientBatchManager {
         if (processDescriptor.indirectConsensus) {
             ClientRequest[] requests = ClientBatchStore.instance.getBatch(rid);
             for (ClientRequest request : requests) {
-                synchronized (ReplicaRequestTimelines.lock) {
+//                synchronized (ReplicaRequestTimelines.lock) {
                     ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(ClientBatchManager_OnForwardClientBatch, System.currentTimeMillis()));
-                }
+//                }
             }
         }
 
@@ -173,15 +173,15 @@ final public class ClientBatchManager {
 
         logger.debug("Forwarding batch: {}", fReqMsg);
         for (ClientRequest request : batches) {
-            synchronized (ReplicaRequestTimelines.lock) {
+//            synchronized (ReplicaRequestTimelines.lock) {
                 ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(ClientBatchManager_SendToAll, System.currentTimeMillis()));
-            }
+//            }
         }
         network.sendToOthers(fReqMsg);
         for (ClientRequest request : batches) {
-            synchronized (ReplicaRequestTimelines.lock) {
+//            synchronized (ReplicaRequestTimelines.lock) {
                 ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(ClientBatchManager_BatchSent, System.currentTimeMillis()));
-            }
+//            }
         }
 
         // Local delivery

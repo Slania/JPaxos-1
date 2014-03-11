@@ -163,17 +163,17 @@ class Acceptor {
             for (ClientBatchID batchID : cbids) {
                 ClientRequest[] requests = ClientBatchStore.instance.getBatch(batchID);
                 for (ClientRequest request : requests) {
-                    synchronized (ReplicaRequestTimelines.lock) {
+//                    synchronized (ReplicaRequestTimelines.lock) {
                         ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(Acceptor_OnPropose, System.currentTimeMillis()));
-                    }
+//                    }
                 }
             }
         } else {
             ClientRequest[] requests = UnBatcher.unpackCR(instance.getValue());
             for (ClientRequest request : requests) {
-                synchronized (ReplicaRequestTimelines.lock) {
+//                synchronized (ReplicaRequestTimelines.lock) {
                     ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(Acceptor_OnPropose, System.currentTimeMillis()));
-                }
+//                }
             }
         }
 

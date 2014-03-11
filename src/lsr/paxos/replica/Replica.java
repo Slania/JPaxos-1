@@ -383,9 +383,9 @@ public class Replica {
 
         for (ClientRequest cRequest : requests) {
             RequestId rID = cRequest.getRequestId();
-            synchronized (ReplicaRequestTimelines.lock) {
+//            synchronized (ReplicaRequestTimelines.lock) {
                 ReplicaRequestTimelines.addFlowPoint(rID, new FlowPointData(FlowPointData.FlowPoint.Replica_ExecuteClientRequest, System.currentTimeMillis()));
-            }
+//            }
             Reply lastReply = executedRequests.get(rID.getClientId());
             if (lastReply != null) {
                 int lastSequenceNumberFromClient = lastReply.getRequestId().getSeqNumber();

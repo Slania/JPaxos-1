@@ -217,9 +217,9 @@ public class ClientRequestBatcher implements Runnable {
         final ClientRequest[] batches = batch.toArray(new ClientRequest[batch.size()]);
 
         for (ClientRequest clientRequest : batches) {
-            synchronized (ReplicaRequestTimelines.lock) {
+//            synchronized (ReplicaRequestTimelines.lock) {
                 ReplicaRequestTimelines.addFlowPoint(clientRequest.getRequestId(), new FlowPointData(ClientRequestBatcher_SendBatch, System.currentTimeMillis()));
-            }
+//            }
         }
 
         if (processDescriptor.indirectConsensus)

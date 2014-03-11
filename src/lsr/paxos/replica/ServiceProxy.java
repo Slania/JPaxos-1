@@ -181,13 +181,13 @@ public class ServiceProxy implements SnapshotListener {
                         (nextSeqNo - 1));
                 nanos = System.nanoTime();
             }
-            synchronized (ReplicaRequestTimelines.lock) {
+//            synchronized (ReplicaRequestTimelines.lock) {
                 ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Service_Execute_Start, System.currentTimeMillis()));
-            }
+//            }
             byte[] result = service.execute(request.getValue(), nextSeqNo - 1);
-            synchronized (ReplicaRequestTimelines.lock) {
+//            synchronized (ReplicaRequestTimelines.lock) {
                 ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Service_Execute_Finish, System.currentTimeMillis()));
-            }
+//            }
             if (logger.isDebugEnabled(processDescriptor.logMark_OldBenchmark)) {
                 nanos = System.nanoTime() - nanos;
                 logger.debug(processDescriptor.logMark_OldBenchmark,

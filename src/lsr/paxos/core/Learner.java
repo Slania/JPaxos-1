@@ -62,18 +62,18 @@ class Learner {
             for (ClientBatchID clientBatchId : clientBatchIds) {
                 ClientRequest[] requests = ClientBatchStore.instance.getBatch(clientBatchId);
                 for (ClientRequest request : requests) {
-                    synchronized (ReplicaRequestTimelines.lock) {
+//                    synchronized (ReplicaRequestTimelines.lock) {
                         ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Learner_OnAccept, System.currentTimeMillis(), sender));
-                    }
+//                    }
                 }
             }
         } else {
             if (!(instance.getValue() == null)) {
                 ClientRequest[] requests = UnBatcher.unpackCR(instance.getValue());
                 for (ClientRequest request : requests) {
-                    synchronized (ReplicaRequestTimelines.lock) {
+//                    synchronized (ReplicaRequestTimelines.lock) {
                         ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.Learner_OnAccept, System.currentTimeMillis(), sender));
-                    }
+//                    }
                 }
             }
         }

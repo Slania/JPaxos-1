@@ -457,17 +457,17 @@ public class ProposerImpl implements Proposer {
             for (ClientBatchID clientBatchId : clientBatchIds) {
                 ClientRequest[] requests = ClientBatchStore.instance.getBatch(clientBatchId);
                 for (ClientRequest request : requests) {
-                    synchronized (ReplicaRequestTimelines.lock) {
+//                    synchronized (ReplicaRequestTimelines.lock) {
                         ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.ProposerImpl_Propose, System.currentTimeMillis()));
-                    }
+//                    }
                 }
             }
         } else {
             ClientRequest[] requests = UnBatcher.unpackCR(instance.getValue());
             for (ClientRequest request : requests) {
-                synchronized (ReplicaRequestTimelines.lock) {
+//                synchronized (ReplicaRequestTimelines.lock) {
                     ReplicaRequestTimelines.addFlowPoint(request.getRequestId(), new FlowPointData(FlowPointData.FlowPoint.ProposerImpl_Propose, System.currentTimeMillis()));
-                }
+//                }
             }
         }
 
