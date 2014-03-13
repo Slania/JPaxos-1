@@ -13,9 +13,9 @@ public class ResultsInterpreter {
     private final Properties configuration = new Properties();
 
     String migrationAgentAckSql = "SELECT distinct request_id from instrumentation where request like 'Ack from migration agent: %'";
-    String migrationInitiationSql = "SELECT distinct request_id from instrumentation where request like 'New Object :%'";
-    String migratedSql = "SELECT distinct request_id from instrumentation where request like 'Object :%'";
-    String updateMigrationTimestampSql = "SELECT distinct request_id from instrumentation where request like 'Updated migration timestamp :%'";
+    String migrationInitiationSql = "SELECT distinct request_id from instrumentation where request like 'New Object %'";
+    String migratedSql = "SELECT distinct request_id from instrumentation where request like 'Object %'";
+    String updateMigrationTimestampSql = "SELECT distinct request_id from instrumentation where request like 'Updated migration timestamp %'";
     String directoryAcksSql = "SELECT distinct request_id from instrumentation where request like 'Directory acks for object %'";
 
     String logsSql = "SELECT replica_id, client_send_request, client_receive_reply, nioclientproxy_execute, clientbatchmanager_sendtoall, clientbatchmanager_batchsent, clientbatchmanager_onforwardclientbatch," +
@@ -175,7 +175,7 @@ public class ResultsInterpreter {
                 bw.write(time);
                 bw.newLine();
             }
-
+            bw.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
