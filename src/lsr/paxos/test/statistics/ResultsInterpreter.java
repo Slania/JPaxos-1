@@ -1,14 +1,27 @@
-package lsr.paxos.test.directory;
+package lsr.paxos.test.statistics;
 
-import java.io.FileInputStream;
-import java.io.IOException;
+import lsr.common.ProcessDescriptor;
+
+import java.io.*;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Properties;
 
 public class ResultsInterpreter {
 
     private Connection connection = null;
     private final Properties configuration = new Properties();
+
+    String migrationAgentAckSql = "SELECT distinct request_id from instrumentation where request like 'Ack from migration agent: %'";
+    String migrationInitiationSql = "SELECT distinct request_id from instrumentation where request like 'New Object :%'";
+    String migratedSql = "SELECT distinct request_id from instrumentation where request like 'Object :%'";
+    String updateMigrationTimestampSql = "SELECT distinct request_id from instrumentation where request like 'Updated migration timestamp :%'";
+    String directoryAcksSql = "SELECT distinct request_id from instrumentation where request like 'Directory acks for object %'";
+
+    String logsSql = "SELECT replica_id, client_send_request, client_receive_reply, nioclientproxy_execute, clientbatchmanager_sendtoall, clientbatchmanager_batchsent, clientbatchmanager_onforwardclientbatch," +
+            "paxos_enqueuerequest, proposerimpl_propose, learner_oncccept, acceptor_onpropose, paxos_decide, decidedcallbackimpl_onrequestordered, decidedcallbackimpl_executerequests, replica_executeclientrequest," +
+            "service_execute_start, service_execute_finish, clientrequestmanager_onrequestexecuted, nioclientproxy_sent, clientrequestbatcher_sendbatch, request FROM instrumentation WHERE request_id = ?";
+
 
     public void start() throws SQLException {
 
@@ -26,9 +39,6 @@ public class ResultsInterpreter {
         String password = "password";
 
         String requestIDSql = "SELECT DISTINCT request_id from instrumentation";
-        String logsSql = "SELECT replica_id, client_send_request, client_receive_reply, nioclientproxy_execute, clientbatchmanager_sendtoall, clientbatchmanager_batchsent, clientbatchmanager_onforwardclientbatch," +
-                "paxos_enqueuerequest, proposerimpl_propose, learner_oncccept, acceptor_onpropose, paxos_decide, decidedcallbackimpl_onrequestordered, decidedcallbackimpl_executerequests, replica_executeclientrequest," +
-                "service_execute_start, service_execute_finish, clientrequestmanager_onrequestexecuted, nioclientproxy_sent, clientrequestbatcher_sendbatch, request FROM instrumentation WHERE request_id = ?";
 
         if (connection == null) {
             try {
@@ -40,9 +50,31 @@ public class ResultsInterpreter {
         }
 
         PreparedStatement preparedStatement = null;
-        preparedStatement = connection.prepareStatement(requestIDSql);
-        ResultSet requestIDs = preparedStatement.executeQuery();
 
+        preparedStatement = connection.prepareStatement(migrationAgentAckSql);
+        ResultSet requestIDs = preparedStatement.executeQuery();
+        processRound("migration_agent_acks", requestIDs);
+
+        preparedStatement = connection.prepareStatement(migrationInitiationSql);
+        requestIDs = preparedStatement.executeQuery();
+        processRound("migration_initiation", requestIDs);
+
+        preparedStatement = connection.prepareStatement(migratedSql);
+        requestIDs = preparedStatement.executeQuery();
+        processRound("migrated", requestIDs);
+
+        preparedStatement = connection.prepareStatement(updateMigrationTimestampSql);
+        requestIDs = preparedStatement.executeQuery();
+        processRound("updated_timestamp", requestIDs);
+
+        preparedStatement = connection.prepareStatement(directoryAcksSql);
+        requestIDs = preparedStatement.executeQuery();
+        processRound("directory_acks", requestIDs);
+
+    }
+
+    private void processRound(String roundName, ResultSet requestIDs) throws SQLException {
+        PreparedStatement preparedStatement;
         while (requestIDs.next()) {
             preparedStatement = connection.prepareStatement(logsSql);
             preparedStatement.setString(1, requestIDs.getString("request_id"));
@@ -50,6 +82,9 @@ public class ResultsInterpreter {
             String replicaId;
             Long clientSendRequest, clientReceiveReply, nioClientProxyExecute, paxosEnqueueRequest, paxosDecide, serviceExecuteStart, serviceExecuteFinish, nioClientProxySent;
             String clientSendRequest_s, clientReceiveReply_s, nioClientProxyExecute_s, paxosEnqueueRequest_s, paxosDecide_s, serviceExecuteStart_s, serviceExecuteFinish_s, nioClientProxySent_s, request;
+            ArrayList<String> clientTimes = new ArrayList<String>();
+            ArrayList<String> leaderTimes = new ArrayList<String>();
+
             while (logs.next()) {
 
                 replicaId = logs.getString("replica_id");
@@ -60,8 +95,6 @@ public class ResultsInterpreter {
                 if (logs.wasNull()) {
                     request = "unknown request";
                 }
-
-//                System.out.println("REQUEST: " + request);
 
                 clientSendRequest_s = logs.getString("client_send_request");
                 if (!logs.wasNull()) {
@@ -112,26 +145,40 @@ public class ResultsInterpreter {
                     nioClientProxySent = (long) -1;
                 }
 
-//                System.out.println("Machine: " + replicaId);
-//                if (clientSendRequest != -1 && clientReceiveReply != -1) {
-//                    System.out.println("Full client side round trip: " + (clientReceiveReply - clientSendRequest));
-//                }
-//                if (nioClientProxyExecute != -1 && nioClientProxySent != -1) {
-//                    System.out.println("Full server side round trip: " + (clientReceiveReply - clientSendRequest));
-//                }
-//                if (paxosEnqueueRequest != -1 && paxosDecide != -1) {
-//                    System.out.println("Paxos end to end: " + (paxosDecide - paxosEnqueueRequest));
-//                }
-                if (serviceExecuteStart != -1 && serviceExecuteFinish != -1) {
-//                    System.out.println("Service time: " + (serviceExecuteFinish - serviceExecuteStart));
-                    System.out.println(serviceExecuteFinish - serviceExecuteStart);
+                if (clientSendRequest != -1 && clientReceiveReply != -1) {
+                    clientTimes.add(String.valueOf(clientReceiveReply - clientSendRequest));
+                }
+                if (paxosEnqueueRequest != -1 && paxosDecide != -1) {
+                    leaderTimes.add(String.valueOf(paxosDecide - paxosEnqueueRequest));
                 }
 
             }
 
-//            System.out.println("-----------------------------------------------------------------------");
+            writeTimesToFile(roundName, "client", clientTimes);
+            writeTimesToFile(roundName, "leader", leaderTimes);
         }
+    }
 
+    private void writeTimesToFile(String roundName, String reportingReplica, ArrayList<String> times) {
+        File file = new File(roundName + reportingReplica + ".txt");
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
+            BufferedWriter bw = new BufferedWriter(fw);
+            for (String time : times) {
+                bw.write(time);
+                bw.newLine();
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) throws SQLException {

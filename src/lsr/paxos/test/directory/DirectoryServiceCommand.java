@@ -384,7 +384,7 @@ public class DirectoryServiceCommand implements Serializable {
                 return "Read status for object " + new String(objectId);
             }
             case INSERT: {
-                return "Object " + new String(objectId) + " migrating from " + getOldReplicaSetAsCsv() + " to " + getNewReplicaSetAsCsv() + ". Migration status: " + migrationComplete;
+                return "New Object " + new String(objectId) + " migrating from " + getOldReplicaSetAsCsv() + " to " + getNewReplicaSetAsCsv() + ". Migration status: " + migrationComplete;
             }
             case UPDATE_MIGRATION_COMPLETE: {
                 return "Directory acks for object " + new String(objectId) + ":" + new String(migrationAcks) + ", migration complete: " + migrationComplete;

@@ -96,34 +96,10 @@ public class NioClientProxy implements ClientProxy {
      */
     private void execute(ByteBuffer buffer) throws InterruptedException {
         ClientCommand command = new ClientCommand(buffer);
-        File file = new File("command_packet_handler_times_" + ProcessDescriptor.getInstance().localId + ".txt");
-        if (!file.exists()) {
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        try {
-            FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
-            BufferedWriter bw = new BufferedWriter(fw);
-            bw.write("In execute: " + String.valueOf(System.currentTimeMillis()) + "\n");
-            bw.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 //        synchronized (ReplicaRequestTimelines.lock) {
             ReplicaRequestTimelines.addFlowPoint(command.getRequest().getRequestId(), new FlowPointData(FlowPointData.FlowPoint.NioClientProxy_Execute, System.currentTimeMillis()));
 //        }
         requestManager.onClientRequest(command, this);
-        try {
-            FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
-            BufferedWriter bw = new BufferedWriter(fw);
-            bw.write("Execute done: " + String.valueOf(System.currentTimeMillis()) + "\n");
-            bw.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
@@ -211,22 +187,6 @@ public class NioClientProxy implements ClientProxy {
         public void finished() throws InterruptedException {
 
             if (header) {
-                File file = new File("command_packet_handler_times_" + ProcessDescriptor.getInstance().localId + ".txt");
-                if (!file.exists()) {
-                    try {
-                        file.createNewFile();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-                try {
-                    FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
-                    BufferedWriter bw = new BufferedWriter(fw);
-                    bw.write("Header Stripping: " + String.valueOf(System.currentTimeMillis()) + "\n");
-                    bw.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
                 assert currentBuffer == readBuffer : "Default buffer should be used for reading header";
 
                 readBuffer.position(ClientCommand.HEADER_VALUE_SIZE_OFFSET);
@@ -240,22 +200,6 @@ public class NioClientProxy implements ClientProxy {
                 }
             } else {
                 currentBuffer.flip();
-                File file = new File("command_packet_handler_times_" + ProcessDescriptor.getInstance().localId + ".txt");
-                if (!file.exists()) {
-                    try {
-                        file.createNewFile();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-                try {
-                    FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
-                    BufferedWriter bw = new BufferedWriter(fw);
-                    bw.write("Flipping buffer before execute: " + String.valueOf(System.currentTimeMillis()) + "\n");
-                    bw.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
                 execute(currentBuffer);
                 // for reading header we can use default buffer
                 currentBuffer = readBuffer;
