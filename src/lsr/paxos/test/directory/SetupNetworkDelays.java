@@ -161,6 +161,10 @@ public class SetupNetworkDelays {
                 }
                 clusters.add(new Cluster(clusterName, clusterReplicas));
             }
+
+            for (Cluster cluster : clusters) {
+                System.out.println(cluster.getName() + ": " + cluster.getReplicas());
+            }
         }
 
         private String delayBetweenNodes(String nodeA, String nodeB) {
