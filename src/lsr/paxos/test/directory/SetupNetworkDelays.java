@@ -131,6 +131,10 @@ public class SetupNetworkDelays {
         private List<Cluster> clusters;
         private final Properties configuration = new Properties();
 
+        public Network() {
+            loadNetworkConfiguration();
+        }
+
         private void loadPropertiesFile() {
             FileInputStream fis = null;
             try {
