@@ -48,6 +48,9 @@ public class SetupNetworkDelays {
             String addPipeCommand = "sudo ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica));
             String modifyPipeDelayCommand = "sudo ipfw pipe " + pipeNumber + " config delay " + (Integer.valueOf(delay)/2) + "ms";
 
+            System.out.println(addPipeCommand);
+            System.out.println(modifyPipeDelayCommand);
+
             builder = new ProcessBuilder("/usr/local/bin/bash", "-c", addPipeCommand);
             builder.redirectErrorStream(true);
             process = builder.start();
@@ -182,8 +185,6 @@ public class SetupNetworkDelays {
         }
 
         private String delayBetweenNodes(String nodeA, String nodeB) {
-            System.out.println("Node A: " + nodeA);
-            System.out.println("Node B: " + nodeB);
             Cluster nodeACluster = null;
             Cluster nodeBCluster = null;
             for (Cluster cluster : clusters) {
@@ -193,8 +194,6 @@ public class SetupNetworkDelays {
                     break;
                 }
             }
-            System.out.println("Node A Cluster: " + nodeACluster);
-            System.out.println("Node B Cluster: " + nodeBCluster);
             String delay = null;
             if (nodeACluster.compareTo(nodeBCluster) < 0) {
                 delay = configuration.getProperty(nodeACluster.getName() + "." + nodeBCluster.getName() + ".interDelay");
