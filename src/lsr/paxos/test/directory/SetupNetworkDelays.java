@@ -164,6 +164,8 @@ public class SetupNetworkDelays {
         }
 
         private String delayBetweenNodes(String nodeA, String nodeB) {
+            System.out.println("Node A: " + nodeA);
+            System.out.println("Node B: " + nodeB);
             Cluster nodeACluster = null;
             Cluster nodeBCluster = null;
             for (Cluster cluster : clusters) {
@@ -173,6 +175,8 @@ public class SetupNetworkDelays {
                     break;
                 }
             }
+            System.out.println("Node A Cluster: " + nodeACluster);
+            System.out.println("Node B Cluster: " + nodeBCluster);
             String delay = null;
             if (nodeACluster.compareTo(nodeBCluster) < 0) {
                 delay = configuration.getProperty(nodeACluster.getName() + "." + nodeBCluster.getName() + ".interDelay");
