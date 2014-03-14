@@ -128,7 +128,7 @@ public class SetupNetworkDelays {
 
     private class Network {
 
-        private List<Cluster> clusters;
+        private List<Cluster> clusters = new ArrayList<Cluster>();
         private final Properties configuration = new Properties();
 
         public Network() {
