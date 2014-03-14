@@ -45,12 +45,16 @@ public class SetupNetworkDelays {
         Integer pipeNumber = 1;
         for (String otherReplica : othersAre) {
             String delay = network.delayBetweenNodes(me, otherReplica);
-            System.out.println("ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + me + " to " + otherReplica);
+            System.out.println("ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica)));
             System.out.println("ipfw pipe " + pipeNumber + " config delay " + (Integer.valueOf(delay)/2) + "ms");
             ruleNumber++;
             pipeNumber++;
         }
 
+    }
+
+    private String getFullName(String node) {
+        return node + "." + configuration.getProperty("experiment.name") + "." + configuration.getProperty("project.name") + ".kodiak.nx";
     }
 
     private void loadPropertiesFile() {
