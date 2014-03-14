@@ -32,11 +32,11 @@ public class SetupNetworkDelays {
 
         Network network = new Network();
 
-        ProcessBuilder builder = new ProcessBuilder("ipfw flush");
+        ProcessBuilder builder = new ProcessBuilder("/usr/local/bin/bash", "-c", "echo y | sudo ipfw flush");
         builder.redirectErrorStream(true);
         Process process = builder.start();
         process.waitFor();
-        builder = new ProcessBuilder("ipfw pipe flush");
+        builder = new ProcessBuilder("/usr/local/bin/bash", "-c", "echo y | sudo ipfw pipe flush");
         builder.redirectErrorStream(true);
         process = builder.start();
         process.waitFor();
