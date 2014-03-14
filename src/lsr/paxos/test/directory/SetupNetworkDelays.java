@@ -45,8 +45,8 @@ public class SetupNetworkDelays {
         Integer pipeNumber = 1;
         for (String otherReplica : othersAre) {
             String delay = network.delayBetweenNodes(me, otherReplica);
-            String addPipeCommand = "ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica));
-            String modifyPipeDelayCommand = "ipfw pipe " + pipeNumber + " config delay " + (Integer.valueOf(delay)/2) + "ms";
+            String addPipeCommand = "sudo ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica));
+            String modifyPipeDelayCommand = "sudo ipfw pipe " + pipeNumber + " config delay " + (Integer.valueOf(delay)/2) + "ms";
 
             builder = new ProcessBuilder("/usr/local/bin/bash", "-c", addPipeCommand);
             builder.redirectErrorStream(true);
