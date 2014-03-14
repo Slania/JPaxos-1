@@ -45,12 +45,22 @@ public class SetupNetworkDelays {
         Integer pipeNumber = 1;
         for (String otherReplica : othersAre) {
             String delay = network.delayBetweenNodes(me, otherReplica);
-            System.out.println("ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica)));
-            System.out.println("ipfw pipe " + pipeNumber + " config delay " + (Integer.valueOf(delay)/2) + "ms");
+            String addPipeCommand = "ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica));
+            String modifyPipeDelayCommand = "ipfw pipe " + pipeNumber + " config delay " + (Integer.valueOf(delay)/2) + "ms";
+
+            builder = new ProcessBuilder("/usr/local/bin/bash", "-c", addPipeCommand);
+            builder.redirectErrorStream(true);
+            process = builder.start();
+            process.waitFor();
+
+            builder = new ProcessBuilder("/usr/local/bin/bash", "-c", modifyPipeDelayCommand);
+            builder.redirectErrorStream(true);
+            process = builder.start();
+            process.waitFor();
+
             ruleNumber++;
             pipeNumber++;
         }
-
     }
 
     private String getFullName(String node) {
