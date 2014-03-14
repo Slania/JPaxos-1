@@ -14,7 +14,7 @@ public class DirectoryClient {
     private Client client;
 
     public void run() throws IOException, ReplicationException, InterruptedException {
-        client = new Client();
+        client = new Client(4);
         client.connect();
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         for (;;){

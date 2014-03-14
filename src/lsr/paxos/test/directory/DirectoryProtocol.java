@@ -89,7 +89,7 @@ public class DirectoryProtocol {
             }
         }
 
-        client = new Client();
+        client = new Client(4);
         client.connect();
 
         while (true) {

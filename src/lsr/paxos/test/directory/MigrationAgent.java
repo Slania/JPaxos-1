@@ -43,7 +43,7 @@ public class MigrationAgent {
             serverSocketChannel.socket().bind(address);
             serverSocketChannel.configureBlocking(false);
 
-            client = new Client();
+            client = new Client(4);
             client.connect();
 
             DirectoryServiceCommand command = new DirectoryServiceCommand(hostAddress.getBytes(), port, DirectoryServiceCommand.DirectoryCommandType.REGISTER_MIGRATION_AGENT);

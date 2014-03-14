@@ -155,6 +155,8 @@ public class Client {
     public Client(int contactReplicaId) throws IOException {
         this.replicas = new Configuration().getProcesses();
         this.contactReplicaId = contactReplicaId;
+        Thread requestTimeline = new Thread(new ReplicaRequestTimelines());
+        requestTimeline.start();
     }
 
     /**
