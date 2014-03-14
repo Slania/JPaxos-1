@@ -157,7 +157,7 @@ public class SetupNetworkDelays {
                 ArrayList<String> clusterReplicas = new ArrayList<String>();
                 while (clusterMemberTokenizer.hasMoreElements()) {
                     String clusterMember = (String) clusterMemberTokenizer.nextElement();
-                    clusterReplicas.add(clusterMember + "." + configuration.getProperty("experiment.name") + "." + configuration.getProperty("project.name") + ".kodiak.nx");
+                    clusterReplicas.add(clusterMember);
                 }
                 clusters.add(new Cluster(clusterName, clusterReplicas));
             }
