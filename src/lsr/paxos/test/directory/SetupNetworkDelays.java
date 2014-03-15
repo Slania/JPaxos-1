@@ -200,7 +200,7 @@ public class SetupNetworkDelays {
             } else if (nodeACluster.compareTo(nodeBCluster) == 0) {
                 delay = configuration.getProperty(nodeACluster.getName() + ".intraDelay");
             } else {
-                delay = configuration.getProperty(nodeBCluster.getName() + "." + nodeACluster.getName());
+                delay = configuration.getProperty(nodeBCluster.getName() + "." + nodeACluster.getName() + ".interDelay");
             }
             return delay;
         }
