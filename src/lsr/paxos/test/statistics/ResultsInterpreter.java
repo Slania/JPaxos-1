@@ -163,7 +163,7 @@ public class ResultsInterpreter {
 
     private void writeTimesToFile(String roundName, String reportingReplica, ArrayList<String> times) {
 
-        String dirPath = "results/sri/" + DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd_kk:00:00"));
+        String dirPath = "results/sri/" + DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd_kk-00-00"));
         File directory = new File(dirPath);
         boolean directoryExists = true;
 
