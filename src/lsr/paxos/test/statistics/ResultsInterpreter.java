@@ -1,6 +1,8 @@
 package lsr.paxos.test.statistics;
 
 import lsr.common.ProcessDescriptor;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
 
 import java.io.*;
 import java.sql.*;
@@ -160,24 +162,35 @@ public class ResultsInterpreter {
     }
 
     private void writeTimesToFile(String roundName, String reportingReplica, ArrayList<String> times) {
-        File file = new File(roundName + reportingReplica + ".txt");
-        if (!file.exists()) {
+
+        String dirPath = "results/sri/" + DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd_kk:mm:ss"));
+        File directory = new File(dirPath);
+        boolean directoryExists = true;
+
+        if (!directory.exists()) {
+            directoryExists = directory.mkdirs();
+        }
+
+        if (directoryExists) {
+            File file = new File(dirPath + "/" + roundName + reportingReplica + ".txt");
+            if (!file.exists()) {
+                try {
+                    file.createNewFile();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
             try {
-                file.createNewFile();
+                FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
+                BufferedWriter bw = new BufferedWriter(fw);
+                for (String time : times) {
+                    bw.write(time);
+                    bw.newLine();
+                }
+                bw.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
-        try {
-            FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
-            BufferedWriter bw = new BufferedWriter(fw);
-            for (String time : times) {
-                bw.write(time);
-                bw.newLine();
-            }
-            bw.close();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
