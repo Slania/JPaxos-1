@@ -2,5 +2,6 @@
 .idea
 *.iml
 network.properties
+paxos.properties
 out
 jpaxosLogs
