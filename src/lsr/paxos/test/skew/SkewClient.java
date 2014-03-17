@@ -19,10 +19,10 @@ public class SkewClient {
         skewTimeline.start();
         int ack = 1;
         int transactionNumber = 1;
+        skewServer = new Socket(skewServerName, Integer.valueOf(skewServerPort));
+        skewServerOutputStream = new DataOutputStream(skewServer.getOutputStream());
+        skewServerInputStream = new DataInputStream(skewServer.getInputStream());
         while (ack == 1) {
-            skewServer = new Socket(skewServerName, Integer.valueOf(skewServerPort));
-            skewServerOutputStream = new DataOutputStream(skewServer.getOutputStream());
-            skewServerInputStream = new DataInputStream(skewServer.getInputStream());
             skewServerOutputStream.write(1);
             skewServerOutputStream.flush();
             SkewTimelines.addFlowPoint(transactionNumber + "," + System.currentTimeMillis());

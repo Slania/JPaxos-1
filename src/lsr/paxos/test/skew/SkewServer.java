@@ -20,16 +20,18 @@ public class SkewServer {
         skewTimeline.start();
         int syn = 1;
         int transactionNumber = 1;
+        skewServer = new ServerSocket(Integer.valueOf(skewServerPort));
+        skewClient = skewServer.accept();
+        skewClientOutputStream = new DataOutputStream(skewClient.getOutputStream());
+        skewClientInputStream = new DataInputStream(skewClient.getInputStream());
         while (syn == 1) {
-            skewServer = new ServerSocket(Integer.valueOf(skewServerPort));
-            skewClient = skewServer.accept();
-            skewClientOutputStream = new DataOutputStream(skewClient.getOutputStream());
-            skewClientInputStream = new DataInputStream(skewClient.getInputStream());
             syn = skewClientInputStream.readInt();
+            System.out.println(syn);
             SkewTimelines.addFlowPoint(transactionNumber + "," + System.currentTimeMillis());
             if (syn == 1) {
                 skewClientOutputStream.write(1);
             }
+            System.out.println();
             transactionNumber++;
         }
     }
