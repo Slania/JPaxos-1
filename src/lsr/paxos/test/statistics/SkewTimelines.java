@@ -55,6 +55,7 @@ public class SkewTimelines implements Runnable {
         FileWriter fw = new FileWriter(file.getAbsoluteFile(), true);
         BufferedWriter bw = new BufferedWriter(fw);
         bw.write(data);
+        bw.newLine();
         bw.close();
     }
 
