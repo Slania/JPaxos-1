@@ -26,7 +26,6 @@ public class SkewServer {
         skewClientInputStream = new DataInputStream(skewClient.getInputStream());
         while (syn == 1) {
             syn = skewClientInputStream.read();
-            System.out.println(syn);
             SkewTimelines.addFlowPoint(transactionNumber + "," + System.currentTimeMillis());
             if (syn == 1) {
                 skewClientOutputStream.write(1);
