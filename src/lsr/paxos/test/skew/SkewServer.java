@@ -29,7 +29,7 @@ public class SkewServer {
             System.out.println(syn);
             SkewTimelines.addFlowPoint(transactionNumber + "," + System.currentTimeMillis());
             if (syn == 1) {
-                skewClientOutputStream.write(1);
+                skewClientOutputStream.write(Integer.valueOf(1));
             }
             System.out.println();
             transactionNumber++;
