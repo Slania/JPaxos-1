@@ -23,10 +23,10 @@ public class SkewClient {
         skewServerOutputStream = new DataOutputStream(skewServer.getOutputStream());
         skewServerInputStream = new DataInputStream(skewServer.getInputStream());
         while (ack == 1) {
-            skewServerOutputStream.write(Integer.valueOf(1));
+            skewServerOutputStream.write(1);
             skewServerOutputStream.flush();
             SkewTimelines.addFlowPoint(transactionNumber + "," + System.currentTimeMillis());
-            ack = skewServerInputStream.readInt();
+            ack = skewServerInputStream.read();
             transactionNumber++;
         }
     }
