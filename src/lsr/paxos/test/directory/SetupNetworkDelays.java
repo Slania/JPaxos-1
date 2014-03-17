@@ -63,7 +63,7 @@ public class SetupNetworkDelays {
 
             for (String destPort : allOtherReplicaPorts) {
                 for (String srcPort : allMyPorts) {
-                    String addPipeCommand = "sudo ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + srcPort + " to " + nsLookUp(getFullName(otherReplica) + destPort);
+                    String addPipeCommand = "sudo ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + srcPort + " to " + nsLookUp(getFullName(otherReplica)) + destPort;
 
                     if(Integer.valueOf(delay) > 0) {
                         String modifyPipeDelayCommand = "sudo ipfw pipe " + pipeNumber + " config delay " + (Integer.valueOf(delay)/2) + "ms";
