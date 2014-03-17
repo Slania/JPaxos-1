@@ -31,7 +31,6 @@ public class SkewServer {
                 skewClientOutputStream.write(1);
                 skewClientOutputStream.flush();
             }
-            System.out.println();
             transactionNumber++;
         }
     }
