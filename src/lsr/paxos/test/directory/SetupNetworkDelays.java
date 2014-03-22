@@ -66,7 +66,7 @@ public class SetupNetworkDelays {
                     String addPipeCommand = "sudo ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica)) + " src-port " + srcPort + " dst-port " + destPort;
                     String addPipeCommandForFrags = "sudo ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica)) + " frag";
 
-                    if(Integer.valueOf(delay) > 0) {
+                    if(Integer.valueOf(delay) >= 0) {
                         String modifyPipeDelayCommand = "sudo ipfw pipe " + pipeNumber + " config delay " + (Integer.valueOf(delay)/2) + "ms";
 
                         System.out.println(addPipeCommand);
@@ -92,8 +92,6 @@ public class SetupNetworkDelays {
                         ruleNumber++;
                         pipeNumber++;
 
-                    } else if (Integer.valueOf(delay) == 0) {
-                        System.out.println("0ms delay between nodes: " + me + " and " + otherReplica + ". No ipfw rules will be set.");
                     } else {
                         System.out.println("Delay numbers must be non-negative!");
                     }
