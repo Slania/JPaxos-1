@@ -61,33 +61,29 @@ public class SetupNetworkDelays {
                 allOtherReplicaPorts.add((String) portTokenizer.nextElement());
             }
 
-            for (String destPort : allOtherReplicaPorts) {
-                for (String srcPort : allMyPorts) {
-                    String addPipeCommand = "sudo ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica));
+            String addPipeCommand = "sudo ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica));
 
-                    if(Integer.valueOf(delay) >= 0) {
-                        String modifyPipeDelayCommand = "sudo ipfw pipe " + pipeNumber + " config delay " + (Integer.valueOf(delay)/2) + "ms";
+            if (Integer.valueOf(delay) >= 0) {
+                String modifyPipeDelayCommand = "sudo ipfw pipe " + pipeNumber + " config delay " + (Integer.valueOf(delay) / 2) + "ms";
 
-                        System.out.println(addPipeCommand);
-                        System.out.println(modifyPipeDelayCommand);
+                System.out.println(addPipeCommand);
+                System.out.println(modifyPipeDelayCommand);
 
-                        builder = new ProcessBuilder("/usr/local/bin/bash", "-c", addPipeCommand);
-                        builder.redirectErrorStream(true);
-                        process = builder.start();
-                        process.waitFor();
+                builder = new ProcessBuilder("/usr/local/bin/bash", "-c", addPipeCommand);
+                builder.redirectErrorStream(true);
+                process = builder.start();
+                process.waitFor();
 
-                        builder = new ProcessBuilder("/usr/local/bin/bash", "-c", modifyPipeDelayCommand);
-                        builder.redirectErrorStream(true);
-                        process = builder.start();
-                        process.waitFor();
+                builder = new ProcessBuilder("/usr/local/bin/bash", "-c", modifyPipeDelayCommand);
+                builder.redirectErrorStream(true);
+                process = builder.start();
+                process.waitFor();
 
-                        ruleNumber++;
-                        pipeNumber++;
+                ruleNumber++;
+                pipeNumber++;
 
-                    } else {
-                        System.out.println("Delay numbers must be non-negative!");
-                    }
-                }
+            } else {
+                System.out.println("Delay numbers must be non-negative!");
             }
         }
     }
