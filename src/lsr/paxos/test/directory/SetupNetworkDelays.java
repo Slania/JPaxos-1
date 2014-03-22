@@ -63,8 +63,7 @@ public class SetupNetworkDelays {
 
             for (String destPort : allOtherReplicaPorts) {
                 for (String srcPort : allMyPorts) {
-                    String addPipeCommand = "sudo ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica)) + " src-port " + srcPort + " dst-port " + destPort;
-                    String addPipeCommandForFrags = "sudo ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica)) + " frag";
+                    String addPipeCommand = "sudo ipfw add " + ruleNumber + " pipe " + pipeNumber + " ip from " + nsLookUp(getFullName(me)) + " to " + nsLookUp(getFullName(otherReplica));
 
                     if(Integer.valueOf(delay) >= 0) {
                         String modifyPipeDelayCommand = "sudo ipfw pipe " + pipeNumber + " config delay " + (Integer.valueOf(delay)/2) + "ms";
@@ -73,13 +72,6 @@ public class SetupNetworkDelays {
                         System.out.println(modifyPipeDelayCommand);
 
                         builder = new ProcessBuilder("/usr/local/bin/bash", "-c", addPipeCommand);
-                        builder.redirectErrorStream(true);
-                        process = builder.start();
-                        process.waitFor();
-
-                        ruleNumber++;
-
-                        builder = new ProcessBuilder("/usr/local/bin/bash", "-c", addPipeCommandForFrags);
                         builder.redirectErrorStream(true);
                         process = builder.start();
                         process.waitFor();
