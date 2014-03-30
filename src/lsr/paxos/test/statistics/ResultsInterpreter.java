@@ -86,6 +86,7 @@ public class ResultsInterpreter {
             String clientSendRequest_s, clientReceiveReply_s, nioClientProxyExecute_s, paxosEnqueueRequest_s, paxosDecide_s, serviceExecuteStart_s, serviceExecuteFinish_s, nioClientProxySent_s, request;
             ArrayList<String> clientTimes = new ArrayList<String>();
             ArrayList<String> leaderTimes = new ArrayList<String>();
+            ArrayList<String> leaderServiceTimes = new ArrayList<String>();
 
             while (logs.next()) {
 
@@ -154,10 +155,15 @@ public class ResultsInterpreter {
                     leaderTimes.add(String.valueOf(paxosDecide - paxosEnqueueRequest));
                 }
 
+                if (serviceExecuteStart != -1 && serviceExecuteFinish != -1) {
+                    leaderServiceTimes.add(String.valueOf(serviceExecuteFinish - serviceExecuteStart));
+                }
+
             }
 
             writeTimesToFile(roundName, "client", clientTimes);
             writeTimesToFile(roundName, "leader", leaderTimes);
+            writeTimesToFile(roundName + "_servicetime", "leader", leaderServiceTimes);
         }
     }
 
