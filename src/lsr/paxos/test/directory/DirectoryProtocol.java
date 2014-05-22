@@ -105,277 +105,279 @@ public class DirectoryProtocol {
             if (clientReply.getResult().equals(ClientReply.Result.OK)) {
                 isLeader = clientReply.getValue()[0] == 1;
                 logger.info("*******" + processes.get(localId).getHostname() + " is leader? " + isLeader);
-                try {
-                    preparedStatement = connection.prepareStatement(migrationsSql);
-                    rs1 = preparedStatement.executeQuery();
-                    while (rs1.next()) {
-                        String objectId = rs1.getString(1);
-                        System.out.print(objectId);
-                        System.out.print(": ");
-                        String oldReplicaSet = rs1.getString(2);
-                        System.out.println(oldReplicaSet);
-                        System.out.print("--->");
-                        String newReplicaSet = rs1.getString(3);
-                        System.out.println(newReplicaSet);
-                        System.out.print(".Progress: ");
-                        String migrationAcks = rs1.getString(4);
-                        if (rs1.wasNull()) {
-                            logger.info("JDBC not null actually works.");
-                        }
-                        if (rs1.wasNull() || "null".equals(migrationAcks)) {
-                            migrationAcks = null;
-                        }
-                        Timestamp migrationStartedTimestamp = rs1.getTimestamp(5);
-                        if (rs1.wasNull()) {
-                            migrationStartedTimestamp = null;
-                        }
-                        boolean migrated = rs1.getBoolean(6);
-                        String migrationAgentsAcks = rs1.getString(7);
-                        if (rs1.wasNull()) {
-                            migrationAgentsAcks = null;
-                        }
-
-                        System.out.println(migrationAcks);
-
-                        if (migrated) {
-                            if (migrationAcks != null) {
-                                logger.info("There have been some ACKs");
-                                StringTokenizer stringTokenizer = new StringTokenizer(migrationAcks, ",");
-                                boolean atLeastOneElement = false;
-                                while (stringTokenizer.hasMoreElements()) {
-                                    stringTokenizer.nextElement();
-                                    atLeastOneElement = true;
-                                    directoriesSql += "?,";
-                                }
-                                if (atLeastOneElement) {
-                                    directoriesSql = directoriesSql.substring(0, directoriesSql.length() - 1);
-                                    directoriesSql += ")";
-                                }
-                                preparedStatement = connection.prepareStatement(directoriesSql);
-                                int index = 1;
-                                stringTokenizer = new StringTokenizer(migrationAcks, ",");
-                                while (stringTokenizer.hasMoreElements()) {
-                                    preparedStatement.setInt(index, Integer.valueOf((String) stringTokenizer.nextElement()));
-                                    index++;
-                                }
-                                logger.info("Firing query: " + preparedStatement.toString());
-                            } else {
-                                preparedStatement = connection.prepareStatement(emptyDirectoriesSql);
-                                logger.info("Firing query: " + preparedStatement.toString());
+                if (isLeader) {
+                    try {
+                        preparedStatement = connection.prepareStatement(migrationsSql);
+                        rs1 = preparedStatement.executeQuery();
+                        while (rs1.next()) {
+                            String objectId = rs1.getString(1);
+                            System.out.print(objectId);
+                            System.out.print(": ");
+                            String oldReplicaSet = rs1.getString(2);
+                            System.out.println(oldReplicaSet);
+                            System.out.print("--->");
+                            String newReplicaSet = rs1.getString(3);
+                            System.out.println(newReplicaSet);
+                            System.out.print(".Progress: ");
+                            String migrationAcks = rs1.getString(4);
+                            if (rs1.wasNull()) {
+                                logger.info("JDBC not null actually works.");
                             }
-                            rs2 = preparedStatement.executeQuery();
-                            System.out.println("Yet to contact directories:");
-
-                            boolean empty = true;
-                            //messageSize + objectId.length + newReplicaSet.length + objectId + newReplicaSet
-                            int messageSize = 4 + 4 + 4 + objectId.getBytes().length + newReplicaSet.getBytes().length;
-                            ByteBuffer buffer = ByteBuffer.allocate(messageSize);
-                            buffer.putInt(messageSize);
-                            buffer.putInt(objectId.getBytes().length);
-                            buffer.putInt(newReplicaSet.getBytes().length);
-                            buffer.put(objectId.getBytes());
-                            buffer.put(newReplicaSet.getBytes());
-                            buffer.flip();
-
-                            while (rs2.next()) {
-                                empty = false;
-                                int directoryId = rs2.getInt(1);
-                                System.out.println(directoryId);
-                                String directoryIP = rs2.getString(2);
-                                System.out.println(directoryIP);
-                                int directoryPort = rs2.getInt(3);
-                                System.out.println(directoryPort);
-                                System.out.println("*********----------------------------*********");
-
-                                directory = new Socket(directoryIP, directoryPort);
-                                directoryOutputStream = new DataOutputStream(directory.getOutputStream());
-                                directoryInputStream = new DataInputStream(directory.getInputStream());
-
-                                System.out.println("*********Buffer data*********");
-                                logger.info("Object id length: " + buffer.getInt());
-                                logger.info("New replica set length: " + buffer.getInt());
-                                byte[] debugObjId = new byte[objectId.getBytes().length];
-                                buffer.get(debugObjId);
-                                logger.info("Object id: " + new String(debugObjId));
-                                byte[] debugNewRepSet = new byte[newReplicaSet.getBytes().length];
-                                buffer.get(debugNewRepSet);
-                                logger.info("Object id: " + new String(debugNewRepSet));
-
-                                buffer.rewind();
-
-                                directoryOutputStream.write(buffer.array());
-                                directoryOutputStream.flush();
-
-                                int ack = directoryInputStream.readInt();
-                                logger.info("Did directory get it and ACK? " + String.valueOf(ack == 1));
-                                if (ack == 1) {
-                                    logger.info("Migration Acks so far: " + migrationAcks);
-                                    if ((migrationAcks != null &&
-                                        (
-                                            !migrationAcks.contains("," + directoryId + ",") ||
-                                            !migrationAcks.contains("," + directoryId) ||
-                                            !migrationAcks.contains(directoryId + ",") ||
-                                            (!migrationAcks.contains(",") && !migrationAcks.contains(String.valueOf(directoryId)))
-                                        ))
-                                        ||
-                                        migrationAcks == null
-                                    ) {
-                                        if (migrationAcks != null) {
-                                            migrationAcks += "," + directoryId;
-                                        } else {
-                                            migrationAcks = String.valueOf(directoryId);
-                                        }
-                                        logger.info("Migration Acks after update: " + migrationAcks);
-                                        logger.info("*******Paxos updating directory ACK********");
-                                        DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, false, migrationAcks, UPDATE_MIGRATION_COMPLETE);
-                                        byte[] response = client.execute(updateCommand.toByteArray());
-                                        if (ByteBuffer.wrap(response).getInt() == 1) {
-                                            logger.info("*******Paxos updated*******");
-                                        }
-//                                        Thread.sleep(1000);
-                                    }
-                                }
+                            if (rs1.wasNull() || "null".equals(migrationAcks)) {
+                                migrationAcks = null;
+                            }
+                            Timestamp migrationStartedTimestamp = rs1.getTimestamp(5);
+                            if (rs1.wasNull()) {
+                                migrationStartedTimestamp = null;
+                            }
+                            boolean migrated = rs1.getBoolean(6);
+                            String migrationAgentsAcks = rs1.getString(7);
+                            if (rs1.wasNull()) {
+                                migrationAgentsAcks = null;
                             }
 
-                            if (empty) {
-                                logger.info("*******Paxos updating migration to completed********");
-                                DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, true, migrationAcks, UPDATE_MIGRATION_COMPLETE);
-                                byte[] response = client.execute(updateCommand.toByteArray());
-                                if (ByteBuffer.wrap(response).getInt() == 1) {
-                                    logger.info("*******Paxos updated*******");
-                                }
-                            }
-                        } else {
-                            if (migrationStartedTimestamp == null ||
-                                    migrationStartedTimestamp.before(Timestamp.valueOf(DateTime.now().minusMinutes(5).toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))))) {
+                            System.out.println(migrationAcks);
 
-                                if (migrationAgentsAcks != null) {
-                                    logger.info("There have been some migration agent ACKs");
-                                    StringTokenizer stringTokenizer = new StringTokenizer(migrationAgentsAcks, ",");
+                            if (migrated) {
+                                if (migrationAcks != null) {
+                                    logger.info("There have been some ACKs");
+                                    StringTokenizer stringTokenizer = new StringTokenizer(migrationAcks, ",");
                                     boolean atLeastOneElement = false;
                                     while (stringTokenizer.hasMoreElements()) {
                                         stringTokenizer.nextElement();
                                         atLeastOneElement = true;
-                                        migrationAgentsSql += "?,";
+                                        directoriesSql += "?,";
                                     }
                                     if (atLeastOneElement) {
-                                        migrationAgentsSql = migrationAgentsSql.substring(0, migrationAgentsSql.length() - 1);
-                                        migrationAgentsSql += ")";
+                                        directoriesSql = directoriesSql.substring(0, directoriesSql.length() - 1);
+                                        directoriesSql += ")";
                                     }
-                                    preparedStatement = connection.prepareStatement(migrationAgentsSql);
+                                    preparedStatement = connection.prepareStatement(directoriesSql);
                                     int index = 1;
-                                    stringTokenizer = new StringTokenizer(migrationAgentsAcks, ",");
+                                    stringTokenizer = new StringTokenizer(migrationAcks, ",");
                                     while (stringTokenizer.hasMoreElements()) {
                                         preparedStatement.setInt(index, Integer.valueOf((String) stringTokenizer.nextElement()));
                                         index++;
                                     }
                                     logger.info("Firing query: " + preparedStatement.toString());
                                 } else {
-                                    preparedStatement = connection.prepareStatement(emptyMigrationAgentsSql);
+                                    preparedStatement = connection.prepareStatement(emptyDirectoriesSql);
                                     logger.info("Firing query: " + preparedStatement.toString());
                                 }
-
                                 rs2 = preparedStatement.executeQuery();
-                                int messageSize = 4 + 4 + 4 + 4 + objectId.getBytes().length + newReplicaSet.getBytes().length + oldReplicaSet.getBytes().length;
+                                System.out.println("Yet to contact directories:");
+
+                                boolean empty = true;
+                                //messageSize + objectId.length + newReplicaSet.length + objectId + newReplicaSet
+                                int messageSize = 4 + 4 + 4 + objectId.getBytes().length + newReplicaSet.getBytes().length;
                                 ByteBuffer buffer = ByteBuffer.allocate(messageSize);
                                 buffer.putInt(messageSize);
                                 buffer.putInt(objectId.getBytes().length);
                                 buffer.putInt(newReplicaSet.getBytes().length);
-                                buffer.putInt(oldReplicaSet.getBytes().length);
                                 buffer.put(objectId.getBytes());
                                 buffer.put(newReplicaSet.getBytes());
-                                buffer.put(oldReplicaSet.getBytes());
                                 buffer.flip();
-
-                                boolean empty = true;
 
                                 while (rs2.next()) {
                                     empty = false;
-                                    int migrationAgentId = rs2.getInt(1);
-                                    System.out.println(migrationAgentId);
-                                    String migrationAgentIP = rs2.getString(2);
-                                    System.out.println(migrationAgentIP);
-                                    int migrationAgentPort = rs2.getInt(3);
-                                    System.out.println(migrationAgentPort);
+                                    int directoryId = rs2.getInt(1);
+                                    System.out.println(directoryId);
+                                    String directoryIP = rs2.getString(2);
+                                    System.out.println(directoryIP);
+                                    int directoryPort = rs2.getInt(3);
+                                    System.out.println(directoryPort);
                                     System.out.println("*********----------------------------*********");
 
-                                    migrationAgent = new Socket(migrationAgentIP, migrationAgentPort);
-                                    migrationAgentOutputStream = new DataOutputStream(migrationAgent.getOutputStream());
+                                    directory = new Socket(directoryIP, directoryPort);
+                                    directoryOutputStream = new DataOutputStream(directory.getOutputStream());
+                                    directoryInputStream = new DataInputStream(directory.getInputStream());
 
-                                    migrationAgentOutputStream.write(buffer.array());
-                                    migrationAgentOutputStream.flush();
-                                    //TODO: should i be closing this instantly or waiting for a while?
-                                    migrationAgentOutputStream.close();
-                                    migrationAgent.close();
+                                    System.out.println("*********Buffer data*********");
+                                    logger.info("Object id length: " + buffer.getInt());
+                                    logger.info("New replica set length: " + buffer.getInt());
+                                    byte[] debugObjId = new byte[objectId.getBytes().length];
+                                    buffer.get(debugObjId);
+                                    logger.info("Object id: " + new String(debugObjId));
+                                    byte[] debugNewRepSet = new byte[newReplicaSet.getBytes().length];
+                                    buffer.get(debugNewRepSet);
+                                    logger.info("Object id: " + new String(debugNewRepSet));
+
                                     buffer.rewind();
-                                }
 
-                                logger.info("*******Updating migration timestamp*******");
-                                DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss")), UPDATE_MIGRATION_TIMESTAMP);
-                                byte[] response = client.execute(updateCommand.toByteArray());
-                                if (ByteBuffer.wrap(response).getInt() == 1) {
-                                    logger.info("*******Paxos updated*******");
+                                    directoryOutputStream.write(buffer.array());
+                                    directoryOutputStream.flush();
+
+                                    int ack = directoryInputStream.readInt();
+                                    logger.info("Did directory get it and ACK? " + String.valueOf(ack == 1));
+                                    if (ack == 1) {
+                                        logger.info("Migration Acks so far: " + migrationAcks);
+                                        if ((migrationAcks != null &&
+                                            (
+                                                !migrationAcks.contains("," + directoryId + ",") ||
+                                                !migrationAcks.contains("," + directoryId) ||
+                                                !migrationAcks.contains(directoryId + ",") ||
+                                                (!migrationAcks.contains(",") && !migrationAcks.contains(String.valueOf(directoryId)))
+                                            ))
+                                            ||
+                                            migrationAcks == null
+                                        ) {
+                                            if (migrationAcks != null) {
+                                                migrationAcks += "," + directoryId;
+                                            } else {
+                                                migrationAcks = String.valueOf(directoryId);
+                                            }
+                                            logger.info("Migration Acks after update: " + migrationAcks);
+                                            logger.info("*******Paxos updating directory ACK********");
+                                            DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, false, migrationAcks, UPDATE_MIGRATION_COMPLETE);
+                                            byte[] response = client.execute(updateCommand.toByteArray());
+                                            if (ByteBuffer.wrap(response).getInt() == 1) {
+                                                logger.info("*******Paxos updated*******");
+                                            }
+    //                                        Thread.sleep(1000);
+                                        }
+                                    }
                                 }
 
                                 if (empty) {
-                                    logger.info("*******Paxos updating to migrated********");
-                                    updateCommand = new DirectoryServiceCommand(objectId, true, DirectoryServiceCommand.DirectoryCommandType.UPDATE_MIGRATED);
-                                    response = client.execute(updateCommand.toByteArray());
+                                    logger.info("*******Paxos updating migration to completed********");
+                                    DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, true, migrationAcks, UPDATE_MIGRATION_COMPLETE);
+                                    byte[] response = client.execute(updateCommand.toByteArray());
                                     if (ByteBuffer.wrap(response).getInt() == 1) {
                                         logger.info("*******Paxos updated*******");
                                     }
                                 }
-
                             } else {
-                                if (migrationAgentsAcks != null) {
-                                    logger.info("There have been some migration agent ACKs");
-                                    StringTokenizer stringTokenizer = new StringTokenizer(migrationAgentsAcks, ",");
-                                    boolean atLeastOneElement = false;
-                                    while (stringTokenizer.hasMoreElements()) {
-                                        stringTokenizer.nextElement();
-                                        atLeastOneElement = true;
-                                        migrationAgentsSql += "?,";
+                                if (migrationStartedTimestamp == null ||
+                                        migrationStartedTimestamp.before(Timestamp.valueOf(DateTime.now().minusMinutes(5).toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss"))))) {
+
+                                    if (migrationAgentsAcks != null) {
+                                        logger.info("There have been some migration agent ACKs");
+                                        StringTokenizer stringTokenizer = new StringTokenizer(migrationAgentsAcks, ",");
+                                        boolean atLeastOneElement = false;
+                                        while (stringTokenizer.hasMoreElements()) {
+                                            stringTokenizer.nextElement();
+                                            atLeastOneElement = true;
+                                            migrationAgentsSql += "?,";
+                                        }
+                                        if (atLeastOneElement) {
+                                            migrationAgentsSql = migrationAgentsSql.substring(0, migrationAgentsSql.length() - 1);
+                                            migrationAgentsSql += ")";
+                                        }
+                                        preparedStatement = connection.prepareStatement(migrationAgentsSql);
+                                        int index = 1;
+                                        stringTokenizer = new StringTokenizer(migrationAgentsAcks, ",");
+                                        while (stringTokenizer.hasMoreElements()) {
+                                            preparedStatement.setInt(index, Integer.valueOf((String) stringTokenizer.nextElement()));
+                                            index++;
+                                        }
+                                        logger.info("Firing query: " + preparedStatement.toString());
+                                    } else {
+                                        preparedStatement = connection.prepareStatement(emptyMigrationAgentsSql);
+                                        logger.info("Firing query: " + preparedStatement.toString());
                                     }
-                                    if (atLeastOneElement) {
-                                        migrationAgentsSql = migrationAgentsSql.substring(0, migrationAgentsSql.length() - 1);
-                                        migrationAgentsSql += ")";
-                                    }
-                                    preparedStatement = connection.prepareStatement(migrationAgentsSql);
-                                    int index = 1;
-                                    stringTokenizer = new StringTokenizer(migrationAgentsAcks, ",");
-                                    while (stringTokenizer.hasMoreElements()) {
-                                        preparedStatement.setInt(index, Integer.valueOf((String) stringTokenizer.nextElement()));
-                                        index++;
-                                    }
-                                    logger.info("Firing query: " + preparedStatement.toString());
+
                                     rs2 = preparedStatement.executeQuery();
+                                    int messageSize = 4 + 4 + 4 + 4 + objectId.getBytes().length + newReplicaSet.getBytes().length + oldReplicaSet.getBytes().length;
+                                    ByteBuffer buffer = ByteBuffer.allocate(messageSize);
+                                    buffer.putInt(messageSize);
+                                    buffer.putInt(objectId.getBytes().length);
+                                    buffer.putInt(newReplicaSet.getBytes().length);
+                                    buffer.putInt(oldReplicaSet.getBytes().length);
+                                    buffer.put(objectId.getBytes());
+                                    buffer.put(newReplicaSet.getBytes());
+                                    buffer.put(oldReplicaSet.getBytes());
+                                    buffer.flip();
+
                                     boolean empty = true;
 
                                     while (rs2.next()) {
                                         empty = false;
+                                        int migrationAgentId = rs2.getInt(1);
+                                        System.out.println(migrationAgentId);
+                                        String migrationAgentIP = rs2.getString(2);
+                                        System.out.println(migrationAgentIP);
+                                        int migrationAgentPort = rs2.getInt(3);
+                                        System.out.println(migrationAgentPort);
+                                        System.out.println("*********----------------------------*********");
+
+                                        migrationAgent = new Socket(migrationAgentIP, migrationAgentPort);
+                                        migrationAgentOutputStream = new DataOutputStream(migrationAgent.getOutputStream());
+
+                                        migrationAgentOutputStream.write(buffer.array());
+                                        migrationAgentOutputStream.flush();
+                                        //TODO: should i be closing this instantly or waiting for a while?
+                                        migrationAgentOutputStream.close();
+                                        migrationAgent.close();
+                                        buffer.rewind();
                                     }
+
+                                    logger.info("*******Updating migration timestamp*******");
+                                    DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, DateTime.now().toString(DateTimeFormat.forPattern("yyyy-MM-dd kk:mm:ss")), UPDATE_MIGRATION_TIMESTAMP);
+                                    byte[] response = client.execute(updateCommand.toByteArray());
+                                    if (ByteBuffer.wrap(response).getInt() == 1) {
+                                        logger.info("*******Paxos updated*******");
+                                    }
+
                                     if (empty) {
                                         logger.info("*******Paxos updating to migrated********");
-                                        DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, true, DirectoryServiceCommand.DirectoryCommandType.UPDATE_MIGRATED);
-                                        byte[] response = client.execute(updateCommand.toByteArray());
+                                        updateCommand = new DirectoryServiceCommand(objectId, true, DirectoryServiceCommand.DirectoryCommandType.UPDATE_MIGRATED);
+                                        response = client.execute(updateCommand.toByteArray());
                                         if (ByteBuffer.wrap(response).getInt() == 1) {
                                             logger.info("*******Paxos updated*******");
+                                        }
+                                    }
+
+                                } else {
+                                    if (migrationAgentsAcks != null) {
+                                        logger.info("There have been some migration agent ACKs");
+                                        StringTokenizer stringTokenizer = new StringTokenizer(migrationAgentsAcks, ",");
+                                        boolean atLeastOneElement = false;
+                                        while (stringTokenizer.hasMoreElements()) {
+                                            stringTokenizer.nextElement();
+                                            atLeastOneElement = true;
+                                            migrationAgentsSql += "?,";
+                                        }
+                                        if (atLeastOneElement) {
+                                            migrationAgentsSql = migrationAgentsSql.substring(0, migrationAgentsSql.length() - 1);
+                                            migrationAgentsSql += ")";
+                                        }
+                                        preparedStatement = connection.prepareStatement(migrationAgentsSql);
+                                        int index = 1;
+                                        stringTokenizer = new StringTokenizer(migrationAgentsAcks, ",");
+                                        while (stringTokenizer.hasMoreElements()) {
+                                            preparedStatement.setInt(index, Integer.valueOf((String) stringTokenizer.nextElement()));
+                                            index++;
+                                        }
+                                        logger.info("Firing query: " + preparedStatement.toString());
+                                        rs2 = preparedStatement.executeQuery();
+                                        boolean empty = true;
+
+                                        while (rs2.next()) {
+                                            empty = false;
+                                        }
+                                        if (empty) {
+                                            logger.info("*******Paxos updating to migrated********");
+                                            DirectoryServiceCommand updateCommand = new DirectoryServiceCommand(objectId, true, DirectoryServiceCommand.DirectoryCommandType.UPDATE_MIGRATED);
+                                            byte[] response = client.execute(updateCommand.toByteArray());
+                                            if (ByteBuffer.wrap(response).getInt() == 1) {
+                                                logger.info("*******Paxos updated*******");
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                        if (rs1 != null) {
+                            rs1.close();
+                        }
+                        if (rs2 != null) {
+                            rs2.close();
+                        }
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    } catch (ReplicationException e) {
+                        e.printStackTrace();
                     }
-                    if (rs1 != null) {
-                        rs1.close();
-                    }
-                    if (rs2 != null) {
-                        rs2.close();
-                    }
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                } catch (ReplicationException e) {
-                    e.printStackTrace();
                 }
             }
 
